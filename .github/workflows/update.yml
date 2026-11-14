@@ -1,0 +1,52 @@
+name: Update data and deploy
+
+on:
+  schedule:
+    - cron: "15 10 * * *"   # every morning, ~5-6am US Eastern, after the last West Coast game
+  push:
+    branches: [main]
+  workflow_dispatch:         # "Run workflow" button on the Actions tab
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull last night's games, standings and leaders from ESPN
+        if: github.event_name != 'push'
+        shell: pwsh
+        run: |
+          $et = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, 'America/New_York')
+          ./snapshot.ps1 -Date $et.AddDays(-1).ToString('yyyyMMdd') -Out data.json
+
+      - name: Save data and box score cache
+        if: github.event_name != 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data.json cache
+          git diff --cached --quiet || { git commit -m "Update data for $(TZ=America/New_York date -d yesterday +%F)" && git push; }
+
+      - name: Build site
+        shell: pwsh
+        run: ./build.ps1 -OutDir _site
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
