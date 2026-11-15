@@ -5,7 +5,12 @@ An unofficial fan site with last night's NBA games: top performers, conference s
 ## How it stays up to date
 
 - **In the browser:** the page loads live scores, standings and leaders from ESPN's public API every time it opens. It refreshes every minute while games are in progress and every 10 minutes otherwise.
-- **Every morning (GitHub Actions):** `.github/workflows/update.yml` runs `snapshot.ps1` to save the previous night's games and recompute season plus/minus. Plus/minus isn't published by ESPN, so the script adds it up from every box score and caches each game in `cache/`. Then the workflow rebuilds and redeploys the site. The saved data is the fallback if ESPN can't be reached.
+- **Every morning (GitHub Actions):** `.github/workflows/update.yml` runs `snapshot.ps1` to save the previous night's games, then walks every box score of the season (each game is cached in `cache/box-<id>.json`) to compute what ESPN doesn't publish:
+  - season plus/minus per game
+  - team offensive, defensive and net ratings (points per 100 estimated possessions)
+  - trendlines: the current top 5 in PPG, RPG, APG, BPG, SPG and PER, with each player's season average after every game day (PER uses Hollinger's formula)
+  
+  Then the workflow rebuilds and redeploys the site. The saved data is the fallback if ESPN can't be reached.
 
 To refresh by hand, open the **Actions** tab, choose **Update data and deploy**, and click **Run workflow**.
 
