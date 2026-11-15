@@ -1,0 +1,1183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Culture Seeker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Type a full name to see the likely religion, ethnic background and native country it points to, with the reasoning behind each estimate.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600;7..72,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column. Name input on top, a "name anatomy" strip that shows the matched pieces, then three finding cards. */
+:root {
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --ink: #17202b;
+  --muted: #5a6675;
+  --line: #d5dbe3;
+  --accent: #0f5c63;
+  --accent-soft: #d8ebec;
+  --mark: #f3c34a;
+  --mark-ink: #3a2a00;
+  --bar: #0f5c63;
+  --bar-track: #e3e8ee;
+  --warn: #8a5a00;
+  --font-display: "Literata", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10161d; --surface: #18212b; --ink: #e6ebf0; --muted: #9aa7b6; --line: #2b3744;
+    --accent: #6cc4cb; --accent-soft: #1d3a3e; --mark: #e2b23e; --mark-ink: #241a00;
+    --bar: #6cc4cb; --bar-track: #26313d; --warn: #e5b45a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10161d; --surface: #18212b; --ink: #e6ebf0; --muted: #9aa7b6; --line: #2b3744;
+  --accent: #6cc4cb; --accent-soft: #1d3a3e; --mark: #e2b23e; --mark-ink: #241a00;
+  --bar: #6cc4cb; --bar-track: #26313d; --warn: #e5b45a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 40px 64px; display: grid; gap: 28px; }
+header { display: grid; gap: 10px; }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+h1 { font: 700 clamp(2rem, 5vw, 2.9rem)/1.1 var(--font-display); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.tag { font: 500 0.72rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); }
+.lede { margin: 0; color: var(--muted); max-width: 62ch; }
+
+form { display: flex; gap: 10px; flex-wrap: wrap; }
+label.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+#name {
+  flex: 1 1 280px; min-width: 0; font: 500 1.15rem/1.3 var(--font-body); color: var(--ink);
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: 8px; padding: 14px 16px;
+}
+#name:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+button.go {
+  font: 600 1rem/1 var(--font-body); background: var(--accent); color: var(--surface); border: 0;
+  border-radius: 8px; padding: 14px 22px; cursor: pointer;
+}
+button.go:hover { filter: brightness(1.08); }
+button:focus-visible, .chip:focus-visible { outline: 3px solid var(--mark); outline-offset: 2px; }
+.examples { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.85rem; color: var(--muted); }
+.chip {
+  font: 400 0.85rem/1 var(--font-body); color: var(--ink); background: transparent;
+  border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; cursor: pointer;
+}
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.error { color: var(--warn); margin: 0; font-weight: 500; }
+
+/* Name anatomy */
+.anatomy { display: grid; gap: 14px; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.anatomy h2, .card h2 { font: 500 0.72rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin: 0; }
+.parts { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
+.part { display: grid; gap: 4px; min-width: 0; }
+.part .word { font: 600 clamp(1.5rem, 4vw, 2.1rem)/1.15 var(--font-display); overflow-wrap: anywhere; }
+.part .role { font: 400 0.72rem/1 var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+mark { background: var(--mark); color: var(--mark-ink); border-radius: 3px; padding: 0 2px; }
+.signals { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.signals li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: baseline; font-size: 0.92rem; }
+.signals code { font: 500 0.8rem/1.4 var(--font-mono); background: var(--accent-soft); color: var(--accent); padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+.signals span { min-width: 0; }
+.note { font-size: 0.85rem; color: var(--muted); margin: 0; }
+
+/* Finding cards */
+.cards { display: grid; gap: 18px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px; display: grid; gap: 14px; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.verdict { font: 600 clamp(1.4rem, 3.6vw, 1.85rem)/1.2 var(--font-display); margin: 0; text-wrap: balance; }
+.pill { font: 500 0.72rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; padding: 6px 10px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.high { color: var(--accent); }
+.pill.moderate { color: var(--ink); }
+.pill.low { color: var(--warn); }
+.bars { display: grid; gap: 8px; }
+.bar { display: grid; grid-template-columns: minmax(0, 15rem) 1fr 3.2rem; gap: 10px; align-items: center; font-size: 0.86rem; }
+.bar .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar .track { height: 8px; background: var(--bar-track); border-radius: 4px; overflow: hidden; }
+.bar .track { display: block; }
+.bar .fill { display: block; height: 100%; background: var(--bar); border-radius: 4px; }
+.bar .pct { font: 500 0.8rem/1 var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.commentary { display: grid; gap: 10px; max-width: 68ch; }
+.commentary p { margin: 0; }
+.commentary p.caveat { font-size: 0.88rem; color: var(--muted); }
+
+.method { border-top: 1px solid var(--line); padding-top: 22px; display: grid; gap: 10px; color: var(--muted); font-size: 0.9rem; max-width: 70ch; }
+.method h2 { font: 600 1.05rem/1.3 var(--font-display); color: var(--ink); margin: 0; }
+.method p { margin: 0; }
+
+@media (max-width: 520px) {
+  .bar { grid-template-columns: minmax(0, 9rem) 1fr 2.8rem; }
+  .card, .anatomy { padding: 16px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bar .fill { transition: width 500ms ease-out; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>Culture Seeker</h1>
+      <span class="tag">Name origin estimator</span>
+    </div>
+    <p class="lede">Type a first and last name. Culture Seeker reads the name's linguistic markers, such as surname suffixes, spelling, and given-name traditions, and estimates the likely religion, ethnic background and native country they point to.</p>
+  </header>
+
+  <section aria-label="Look up a name">
+    <form id="f" autocomplete="off">
+      <label class="sr" for="name">Full name</label>
+      <input id="name" name="name" type="text" placeholder="e.g. Aleksandra Kowalski" spellcheck="false">
+      <button class="go" type="submit">Look up</button>
+    </form>
+    <div class="examples" id="examples" style="margin-top:12px"><span>Try:</span></div>
+    <p class="error" id="err" hidden></p>
+  </section>
+
+  <section class="anatomy" id="anatomy" aria-live="polite"></section>
+  <section class="cards" id="cards" aria-live="polite"></section>
+
+  <section class="method">
+    <h2>How Culture Seeker works, and where it falls short</h2>
+    <p>Culture Seeker draws on onomastics, the study of names. It holds a reference set of about 4,500 surnames and 3,000 given names across 62 traditions, along with about 80 spelling patterns that linguists and genealogists use to place names, such as Polish <em>-ski</em>, Armenian <em>-yan</em>, Gaelic <em>Mac-</em>, Finnish <em>-nen</em> and Georgian <em>-shvili</em>. When a name isn't in the reference set, Culture Seeker compares its spelling with the closest known names and says so in the results, with lower confidence. Each origin carries a population profile of religious affiliation drawn from widely published survey figures (Pew Research Center, national censuses). The percentages are model weights, not measured probabilities.</p>
+    <p>A name records the language and tradition of the family that passed it on. It does not record a person's own beliefs, citizenship, or full ancestry. Surnames usually follow one line of descent, people convert or leave religions, and names change through marriage, migration and adoption. Use these results as a starting point for curiosity and conversation. They are not a basis for decisions about anyone.</p>
+    <p>Everything runs in your browser. Names you type are not sent or stored anywhere.</p>
+  </section>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------- Religion labels ---------- */
+const PROT = "Christianity (Protestant)", CATH = "Christianity (Catholic)", ORTH = "Christianity (Eastern Orthodox)",
+  EAST = "Christianity (Maronite / Eastern rites)", APOS = "Christianity (Armenian Apostolic)", ETHO = "Christianity (Ethiopian Orthodox)",
+  CHR = "Christianity", ISL = "Islam (Sunni)", SHIA = "Islam (Shia)", HIN = "Hinduism", SIK = "Sikhism", JEW = "Judaism",
+  BUD = "Buddhism", JAIN = "Jainism", ZORO = "Zoroastrianism", NONE = "No religious affiliation",
+  FOLK = "Chinese folk religion / non-religious", SHIN = "Shinto & Buddhism", TRAD = "Traditional African religion", ALEV = "Islam (Alevi)";
+
+const ADJ = { [ISL]: "Muslim", [SHIA]: "Shia Muslim", [ALEV]: "Alevi", [HIN]: "Hindu", [SIK]: "Sikh", [JEW]: "Jewish", [CATH]: "Catholic", [ORTH]: "Orthodox Christian",
+  [EAST]: "Eastern-rite Christian", [ETHO]: "Ethiopian Orthodox", [APOS]: "Armenian Apostolic", [BUD]: "Buddhist", [JAIN]: "Jain", [ZORO]: "Zoroastrian (Parsi)",
+  [CHR]: "Christian", [PROT]: "Protestant", [TRAD]: "traditional-religion", [FOLK]: "folk-religion", [SHIN]: "Shinto/Buddhist", [NONE]: "non-religious" };
+
+/* ---------- Origin profiles ---------- */
+const O = {
+  anglo: { eth: "English / Anglo-British", cty: ["England (United Kingdom)", "United States", "Canada", "Australia", "New Zealand"],
+    rel: { [PROT]: .45, [NONE]: .37, [CATH]: .15, [CHR]: .03 },
+    ethNote: "English-origin surnames are the most widespread in the English-speaking world. They spread through British settlement and colonial history, so people with these names have many ancestries, including many African American, Afro-Caribbean, and Indigenous families.",
+    ctyNote: "The naming tradition is English, but most living people with English surnames were born in the United States, Canada, Australia or other former British colonies.",
+    relNote: "The English tradition is historically Protestant (Anglican and nonconformist churches). Today Britain is one of the least religious countries in Europe, and about 4 in 10 people report no religion." },
+  irish: { eth: "Irish (Gaelic / Hiberno-Norman)", cty: ["Ireland", "Northern Ireland (UK)", "United States", "Australia", "Canada"],
+    rel: { [CATH]: .7, [NONE]: .18, [PROT]: .12 },
+    ethNote: "Irish surnames mostly come from Gaelic clan names (Ó, \"descendant of\", and Mac, \"son of\") or from Norman families who settled in Ireland after the 12th century.",
+    ctyNote: "Emigration after the Great Famine means far more people of Irish descent live abroad, around 30 million in the US alone, than in Ireland itself.",
+    relNote: "Ireland is historically and predominantly Roman Catholic. Protestant traditions are concentrated in Northern Ireland." },
+  scottish: { eth: "Scottish", cty: ["Scotland (United Kingdom)", "Canada", "United States", "Australia", "New Zealand"],
+    rel: { [PROT]: .42, [NONE]: .43, [CATH]: .15 },
+    ethNote: "Many Scottish surnames are clan names, especially the Mac- patronymics of the Highlands, while Lowland names often come from places or trades.",
+    ctyNote: "Scottish emigration was heavy to Canada (Nova Scotia means \"New Scotland\"), Ulster, the US, Australia and New Zealand.",
+    relNote: "Scotland's national church is the Presbyterian Church of Scotland. There is a sizable Catholic minority, and a growing share of people report no religion." },
+  welsh: { eth: "Welsh", cty: ["Wales (United Kingdom)", "England", "United States", "Australia", "Argentina (Patagonia)"],
+    rel: { [PROT]: .45, [NONE]: .5, [CATH]: .05 },
+    ethNote: "Welsh surnames are few in number but very common. Most are patronymics, such as Jones from John, Davies from David, Price from ap Rhys and Powell from ap Hywel.",
+    ctyNote: "Wales has a small population, so most people with Welsh surnames live in England or in the wider English-speaking world.",
+    relNote: "Wales has a strong nonconformist (Methodist and Baptist chapel) heritage. It is now among the most secular parts of the UK." },
+  german: { eth: "German", cty: ["Germany", "Austria", "Switzerland", "United States", "Brazil"],
+    rel: { [CATH]: .3, [PROT]: .3, [NONE]: .4 },
+    ethNote: "German surnames often come from trades (Müller \"miller\", Schmidt \"smith\"), places, or personal traits. German is the single largest self-reported ancestry in the United States.",
+    ctyNote: "Large German-descended communities exist in the US Midwest, southern Brazil, Argentina, and historically across Central and Eastern Europe.",
+    relNote: "Germany is split roughly evenly between Catholics, who are concentrated in the south and west, and Protestants, who are concentrated in the north and east, with a fast-growing unaffiliated share." },
+  dutch: { eth: "Dutch / Flemish", cty: ["Netherlands", "Belgium (Flanders)", "South Africa", "United States", "Canada"],
+    rel: { [NONE]: .55, [CATH]: .22, [PROT]: .18, [ISL]: .05 },
+    ethNote: "Dutch surnames often carry particles like van (\"from\") and de (\"the\"). Frisian names in the north end in -stra, -sma or -inga.",
+    ctyNote: "Dutch colonial and migration history left communities in South Africa, Suriname, Indonesia, the US (New York and Michigan) and Canada.",
+    relNote: "The Netherlands is one of Europe's most secular countries. The south is historically Catholic and the north historically Reformed Protestant." },
+  afrikaner: { eth: "Afrikaner (Dutch, German & Huguenot descent)", cty: ["South Africa", "Namibia", "Australia", "New Zealand"],
+    rel: { [PROT]: .85, [NONE]: .12, [CHR]: .03 },
+    ethNote: "Afrikaner surnames come from 17th and 18th century Dutch, German and French Huguenot settlers at the Cape, for example van der Merwe, Pretorius and du Plessis.",
+    ctyNote: "These names are concentrated in South Africa and Namibia, with recent emigrant communities in Australia, New Zealand and the UK.",
+    relNote: "Afrikaner communities are traditionally Reformed Protestant, especially the Dutch Reformed Church." },
+  swedish: { eth: "Swedish", cty: ["Sweden", "Finland (Swedish-speaking)", "United States", "Norway"],
+    rel: { [PROT]: .55, [NONE]: .42, [ISL]: .03 },
+    ethNote: "Swedish surnames are mostly -sson patronymics or nature-inspired compounds (Lind \"linden\", Berg \"mountain\", Ström \"stream\") adopted in the 19th and 20th centuries.",
+    ctyNote: "About a fifth of Sweden's population emigrated between 1850 and 1930, mostly to the US Upper Midwest.",
+    relNote: "Most Swedes belong to the Lutheran Church of Sweden by tradition, but Sweden is among the least religiously observant countries in the world." },
+  danonorwegian: { eth: "Danish / Norwegian", cty: ["Denmark", "Norway", "United States", "Canada"],
+    rel: { [PROT]: .7, [NONE]: .27, [ISL]: .03 },
+    ethNote: "Danish and Norwegian patronymics end in -sen (Hansen, Jensen, Olsen). Norwegian surnames also often come from farm names (Haugen, Bakke, Lie).",
+    ctyNote: "Strong Norwegian and Danish heritage communities exist in Minnesota, Wisconsin, the Dakotas and Utah.",
+    relNote: "Both countries have Lutheran national churches with high nominal membership but low weekly attendance." },
+  finnish: { eth: "Finnish", cty: ["Finland", "Sweden", "United States", "Russia (Karelia)"],
+    rel: { [PROT]: .66, [NONE]: .32, [ORTH]: .02 },
+    ethNote: "Finnish is a Uralic language, not Germanic. Its surnames, often ending in -nen or -la, come from places and nature, for example Virtanen (\"stream\") and Mäkinen (\"hill\").",
+    ctyNote: "There is also a large Finnish heritage in Sweden and in Michigan and Minnesota.",
+    relNote: "Most Finns belong to the Evangelical Lutheran Church of Finland, with a small Finnish Orthodox minority." },
+  icelandic: { eth: "Icelandic", cty: ["Iceland", "Canada (Manitoba)", "United States", "Denmark"],
+    rel: { [PROT]: .65, [NONE]: .3, [CATH]: .05 },
+    ethNote: "Iceland still uses true patronymics. A child of Jón is Jónsson (son) or Jónsdóttir (daughter), so the surname changes every generation.",
+    ctyNote: "Iceland has a population of under 400,000. The largest Icelandic heritage community abroad is in Gimli, Manitoba.",
+    relNote: "The Lutheran Church of Iceland is the national church, though membership has fallen steadily." },
+  french: { eth: "French", cty: ["France", "Belgium (Wallonia)", "Switzerland (Romandy)", "Canada (Quebec)", "United States (Louisiana)"],
+    rel: { [CATH]: .48, [NONE]: .4, [ISL]: .07, [PROT]: .03, [JEW]: .02 },
+    ethNote: "French surnames often come from given names (Martin, Bernard), places, or nicknames (Petit, Leroy). French-Canadian surnames like Tremblay and Gagnon descend from a small founding group of 17th century settlers.",
+    ctyNote: "French naming traditions also run through Quebec, Acadia, Louisiana, Haiti, and francophone parts of Africa and the Caribbean.",
+    relNote: "France is historically Catholic but strongly secular (laïque). It also has Western Europe's largest Muslim and Jewish communities." },
+  italian: { eth: "Italian", cty: ["Italy", "United States", "Argentina", "Brazil", "Switzerland (Ticino)"],
+    rel: { [CATH]: .78, [NONE]: .18, [ISL]: .02, [PROT]: .02 },
+    ethNote: "Italian surnames have strong regional flavors. Endings like -ini and -etti are diminutives, and -i plural endings are common in the north and center, while -o endings are more southern.",
+    ctyNote: "Italian emigration produced huge communities in Argentina, where over half the population has some Italian ancestry, as well as in Brazil, the US, Uruguay and Australia.",
+    relNote: "Italy is overwhelmingly Roman Catholic by heritage, though weekly church attendance has declined significantly." },
+  spanish: { eth: "Hispanic / Spanish", cty: ["Spain", "Mexico", "Colombia", "Argentina", "United States", "Peru"],
+    rel: { [CATH]: .68, [PROT]: .14, [NONE]: .18 },
+    ethNote: "Spanish surnames such as García, Rodríguez and Hernández are often patronymics ending in -ez (\"son of\"). Colonization spread them across Latin America and the Philippines, so the surname alone cannot separate Spanish, Mexican, Colombian or other Hispanic heritage. Many Hispanic people also have Indigenous and African ancestry that surnames do not show.",
+    ctyNote: "Spain is the source of the naming tradition, but over 90% of people with Spanish surnames live in the Americas. Mexico has the largest Spanish-speaking population in the world.",
+    relNote: "Spain and Latin America are historically Catholic. Evangelical Protestantism has grown quickly in Latin America, and Spain has become much more secular." },
+  portuguese: { eth: "Portuguese / Lusophone", cty: ["Portugal", "Brazil", "Angola", "Mozambique", "Cape Verde"],
+    rel: { [CATH]: .72, [PROT]: .14, [NONE]: .14 },
+    ethNote: "Portuguese surnames (Silva, Santos, Ferreira) spread through Brazil and Portugal's former African and Asian colonies. Endings like -eira, -eiro and -ão are distinctive.",
+    ctyNote: "Brazil has about 20 times Portugal's population and holds most people with Portuguese surnames. Goa (India), Macau, Cape Verde, Angola and Mozambique also carry the tradition.",
+    relNote: "Portugal is strongly Catholic. Brazil is the world's largest Catholic country but has a fast-growing Evangelical population." },
+  polish: { eth: "Polish", cty: ["Poland", "United States", "Germany", "United Kingdom", "Canada"],
+    rel: { [CATH]: .87, [NONE]: .1, [ORTH]: .02, [PROT]: .01 },
+    ethNote: "The -ski/-cki suffix originally meant \"of [a place]\" and marked nobility before spreading widely. Occupational names like Kowalski (\"blacksmith\") and Nowak (\"newcomer\") are the most common. Polish-form surnames are also found among Ashkenazi Jewish families.",
+    ctyNote: "Chicago has long had one of the largest Polish populations of any city outside Poland, and there are large recent communities in the UK, Germany and Ireland.",
+    relNote: "Poland is one of the most Catholic countries in Europe, and Catholicism is closely tied to Polish national identity." },
+  russian: { eth: "Russian / East Slavic", cty: ["Russia", "Belarus", "Kazakhstan", "Ukraine", "Bulgaria"],
+    rel: { [ORTH]: .62, [NONE]: .28, [ISL]: .05, [JEW]: .02, [PROT]: .03 },
+    ethNote: "The -ov/-ev suffix (feminine -ova/-eva) means \"belonging to\", as in Ivanov, \"of Ivan\". It is used in Russia and Bulgaria and across the former Soviet Union, where non-Russian peoples (Tatars, Kazakhs, Armenians, Azerbaijanis) often adopted Russified surname forms.",
+    ctyNote: "Russian-form surnames are common throughout the former USSR, including Kazakhstan, the Baltics and the Caucasus. Bulgaria uses the same -ov/-ev endings.",
+    relNote: "Russian Orthodoxy is the majority tradition, but decades of Soviet state atheism left a large non-practicing population. Russified surnames can also belong to Muslim Tatars, Bashkirs or Central Asians." },
+  ukrainian: { eth: "Ukrainian", cty: ["Ukraine", "Canada", "United States", "Poland", "Russia"],
+    rel: { [ORTH]: .68, [CATH]: .12, [NONE]: .15, [PROT]: .05 },
+    ethNote: "The -enko suffix (\"son of\") is the classic Ukrainian surname ending, alongside -chuk, -iuk and -yk.",
+    ctyNote: "Canada's Prairie provinces have one of the largest Ukrainian diasporas, around 1.3 million people. Many Ukrainians have also resettled in Poland and across Europe since 2022.",
+    relNote: "Most Ukrainians are Orthodox. Western Ukraine has a large Ukrainian Greek Catholic Church, an Eastern-rite church in communion with Rome." },
+  czech: { eth: "Czech / Slovak", cty: ["Czech Republic", "Slovakia", "United States", "Austria"],
+    rel: { [NONE]: .6, [CATH]: .35, [PROT]: .05 },
+    ethNote: "Czech surnames are often occupational or descriptive, for example Novák (\"newcomer\") and Dvořák (\"courtier\"). They use the háček letters ř, č and š, and women's forms end in -ová.",
+    ctyNote: "Czech communities exist in Texas, Nebraska and Chicago, and there is a long historical presence in Vienna.",
+    relNote: "Czechia is one of the least religious countries in the world. Slovakia, by contrast, is majority Catholic." },
+  south_slavic: { eth: "South Slavic (Serb, Croat, Bosniak)", cty: ["Serbia", "Croatia", "Bosnia and Herzegovina", "Montenegro", "Germany"],
+    rel: { [ORTH]: .42, [CATH]: .36, [ISL]: .18, [NONE]: .04 },
+    ethNote: "The -ić suffix (\"little\" or \"son of\") is shared by Serbs, Croats, Bosniaks and Montenegrins. These groups speak closely related languages but differ in religious heritage, so the surname alone rarely tells them apart. The given name is usually the decisive clue.",
+    ctyNote: "Large Yugoslav-era diasporas live in Germany, Austria, Switzerland, the US and Australia.",
+    relNote: "Here religion is closely tied to ethnic identity. Serbs and Montenegrins are traditionally Orthodox, Croats Catholic, and Bosniaks Muslim. The given name is often the strongest indicator." ,
+    refine: { [ORTH]: ["Serb (South Slavic)", "Serbia"], [CATH]: ["Croat (South Slavic)", "Croatia"], [ISL]: ["Bosniak (South Slavic)", "Bosnia and Herzegovina"] } },
+  greek: { eth: "Greek", cty: ["Greece", "Cyprus", "United States", "Australia", "Germany"],
+    rel: { [ORTH]: .9, [NONE]: .08, [ISL]: .02 },
+    ethNote: "Greek surnames often reveal regional origin through their suffixes: -poulos (\"son of\") is Peloponnesian, -akis is Cretan, -idis/-iadis is Pontic or Anatolian, and -atos is Ionian.",
+    ctyNote: "Melbourne has long been described as having one of the largest Greek populations of any city outside Greece. There are also major communities in the US, Germany and Canada.",
+    relNote: "The Greek Orthodox Church is central to Greek identity. About 9 in 10 Greeks identify as Orthodox." },
+  romanian: { eth: "Romanian", cty: ["Romania", "Moldova", "Italy", "Spain", "Germany"],
+    rel: { [ORTH]: .85, [CATH]: .06, [PROT]: .07, [NONE]: .02 },
+    ethNote: "The -escu and -eanu endings are distinctively Romanian and mean \"belonging to\" or \"from\". Romanian is a Romance language surrounded by Slavic and Hungarian neighbors.",
+    ctyNote: "Since 2007 millions of Romanians have moved to Italy, Spain, Germany and the UK.",
+    relNote: "Romania is one of the most religious countries in Europe, and about 85% of the population is Romanian Orthodox." },
+  hungarian: { eth: "Hungarian (Magyar)", cty: ["Hungary", "Romania (Transylvania)", "Slovakia", "Serbia (Vojvodina)", "United States"],
+    rel: { [CATH]: .5, [PROT]: .2, [NONE]: .28, [JEW]: .02 },
+    ethNote: "Hungarian, like Finnish, is a Uralic language. Common surnames describe traits or origins, for example Nagy (\"big\"), Kovács (\"smith\") and Horváth (\"Croat\"). In Hungary the family name traditionally comes first.",
+    ctyNote: "Large Hungarian minorities live in neighboring Romania, Slovakia, Serbia and Ukraine because of border changes after World War I.",
+    relNote: "Hungary is majority Catholic, with a significant Reformed (Calvinist) minority, especially in the east." },
+  baltic: { eth: "Lithuanian / Latvian (Baltic)", cty: ["Lithuania", "Latvia", "United States", "United Kingdom"],
+    rel: { [CATH]: .65, [PROT]: .12, [ORTH]: .1, [NONE]: .13 },
+    ethNote: "Baltic languages keep ancient grammatical endings. Lithuanian men's surnames end in -as, -is or -us (-auskas, -evičius), and Latvian surnames end in -s or -š (Bērziņš, Kalniņš).",
+    ctyNote: "Chicago has a historic Lithuanian community. Many Lithuanians and Latvians have emigrated to the UK and Ireland since 2004.",
+    relNote: "Lithuania is strongly Catholic. Latvia is mixed Lutheran, Catholic and Orthodox, with many non-religious people." },
+  albanian: { eth: "Albanian", cty: ["Albania", "Kosovo", "North Macedonia", "Italy", "Greece"],
+    rel: { [ISL]: .58, [CATH]: .14, [ORTH]: .1, [NONE]: .15, [ALEV]: .03 },
+    ethNote: "Albanian is its own branch of the Indo-European family. The -aj suffix is typical of northern Albanian and Montenegrin-Albanian families.",
+    ctyNote: "About half of all ethnic Albanians live outside Albania, mainly in Kosovo, North Macedonia, Italy, Greece, Switzerland and the US.",
+    relNote: "Albanians are majority Muslim by heritage, with Catholic and Orthodox minorities and a Bektashi Sufi tradition. Albanian identity is famously less tied to religion than in neighboring countries." },
+  armenian: { eth: "Armenian", cty: ["Armenia", "Russia", "United States", "France", "Lebanon"],
+    rel: { [APOS]: .9, [CATH]: .05, [PROT]: .03, [NONE]: .02 },
+    ethNote: "The -ian/-yan suffix (\"son of\" or \"of the family of\") marks the overwhelming majority of Armenian surnames. Western Armenian families tend to spell it -ian and Eastern Armenians -yan.",
+    ctyNote: "There are more Armenians abroad than in Armenia, with major communities in Russia, Los Angeles (Glendale), France, Lebanon and Argentina. Many descend from survivors of the 1915 genocide.",
+    relNote: "Armenia was the first nation to adopt Christianity as a state religion, in 301 AD. Most Armenians belong to the Armenian Apostolic Church." },
+  georgian: { eth: "Georgian", cty: ["Georgia", "Russia", "Greece", "United States"],
+    rel: { [ORTH]: .85, [ISL]: .1, [APOS]: .03, [NONE]: .02 },
+    ethNote: "Georgian surnames end in -shvili (\"child of\"), typical of eastern Georgia, or in -dze (\"son of\"), typical of the west. These are two of the most recognizable surname markers in the world.",
+    ctyNote: "Georgian surnames are concentrated in Georgia, with diaspora communities in Russia, Greece, Turkey and the US.",
+    relNote: "The Georgian Orthodox Church is central to national identity. Adjara in the southwest has a Muslim Georgian minority." },
+  turkish: { eth: "Turkish", cty: ["Turkey", "Germany", "Cyprus (North)", "Netherlands", "Bulgaria"],
+    rel: { [ISL]: .83, [ALEV]: .12, [NONE]: .05 },
+    ethNote: "Turkish surnames are modern. They were mandated by the 1934 Surname Law, so most are descriptive Turkish words, such as Yılmaz (\"undaunted\"), Demir (\"iron\") and Kaya (\"rock\"), or end in -oğlu (\"son of\").",
+    ctyNote: "Germany has the largest Turkish diaspora, about 3 million people, followed by the Netherlands, France and Austria.",
+    relNote: "Turkey is overwhelmingly Muslim by heritage. Most are Sunni (Hanafi), with a large Alevi minority, and the country has a strong secular tradition." },
+  arab: { eth: "Arab", cty: ["Egypt", "Saudi Arabia", "Iraq", "Syria", "Morocco", "Jordan"],
+    rel: { [ISL]: .82, [SHIA]: .1, [EAST]: .08 },
+    ethNote: "Arab family names often come from a forefather's name, a trade (Haddad \"blacksmith\", Najjar \"carpenter\"), a place, or a tribe. The article al- or el- means \"the\". Arab identity is linguistic and cultural and spans more than 20 countries.",
+    ctyNote: "Arabic surnames are spread from Morocco to Iraq, with large diasporas in France, the US, Brazil (mostly Lebanese and Syrian), Germany and the Gulf states.",
+    relNote: "Most Arabs are Sunni Muslims. Iraq, Bahrain and Lebanon have large Shia communities, and there are ancient Christian communities in Egypt (Copts), Lebanon, Syria, Palestine and Iraq." },
+  levant_christian: { eth: "Levantine Arab (Lebanese / Syrian)", cty: ["Lebanon", "Syria", "Palestine", "Jordan", "Brazil"],
+    rel: { [EAST]: .72, [ISL]: .18, [SHIA]: .1 },
+    ethNote: "Surnames like Khoury (\"priest\"), Boutros (\"Peter\") and Haddad are especially common among Lebanese and Syrian families.",
+    ctyNote: "The Lebanese diaspora, estimated at 8 to 14 million, is larger than Lebanon's own population. Brazil, Argentina, Mexico, the US, Australia and West Africa all have big communities.",
+    relNote: "Several of these surnames are strongly associated with Levantine Christian communities: Maronite, Greek Orthodox and Melkite Catholic." },
+  persian: { eth: "Persian (Iranian)", cty: ["Iran", "United States", "Canada", "Germany", "United Kingdom"],
+    rel: { [SHIA]: .82, [NONE]: .08, [ISL]: .04, [ZORO]: .02, [CHR]: .02, [JEW]: .02 },
+    ethNote: "Persian surnames often end in -i (from a place or ancestor, such as Shirazi, \"from Shiraz\"), -zadeh (\"born of\"), -pour (\"son of\") or -nejad (\"lineage\"). Iran adopted family names in the 1920s.",
+    ctyNote: "Large Iranian diaspora communities live in Los Angeles, Toronto, London and Germany, many dating from after the 1979 revolution.",
+    relNote: "Iran is officially Shia Muslim, though surveys suggest many Iranians are privately secular. Small Zoroastrian, Bahá'í, Jewish, Armenian and Assyrian Christian communities also exist." },
+  jewish: { eth: "Ashkenazi Jewish", cty: ["Israel", "United States", "Historically Poland, Germany, Ukraine, Russia, Lithuania"],
+    rel: { [JEW]: .82, [NONE]: .16, [CHR]: .02 },
+    ethNote: "Many Ashkenazi surnames were assigned in the late 18th and early 19th centuries, when Central and Eastern European states required Jews to take fixed family names. They are often German or Yiddish compounds (Gold-, Rosen-, -berg, -stein) or priestly lineage names like Cohen and Levy.",
+    ctyNote: "The ancestral homeland of Ashkenazi Jews is Central and Eastern Europe. After the Holocaust and mass emigration, the large majority now live in the US and Israel.",
+    relNote: "Jewish identity is both an ethnicity and a religion. Many people of Jewish heritage are secular or culturally Jewish rather than observant. Some surnames on this list are also carried by non-Jewish Germans." },
+  sephardic: { eth: "Jewish (Sephardic / Mizrahi / Israeli)", cty: ["Israel", "Morocco", "France", "Iraq (historically)", "United States"],
+    rel: { [JEW]: .9, [NONE]: .1 },
+    ethNote: "Hebrew surnames like Ben-David and Mizrahi, and North African Jewish names like Peretz, Dahan and Azoulay, reflect Sephardic (Iberian) and Mizrahi (Middle Eastern) Jewish lineages, along with modern Israeli Hebraization of names.",
+    ctyNote: "Most Mizrahi and Sephardic Jews today live in Israel, followed by France and the US. Their families historically lived in Morocco, Iraq, Yemen, Iran, Tunisia and Spain before 1492.",
+    relNote: "Sephardic and Mizrahi communities tend to be more traditionally observant than secular Ashkenazi communities, though practice varies widely." },
+  north_indian: { eth: "North Indian (Hindi-belt / Hindustani)", cty: ["India", "Nepal", "United States", "United Kingdom", "Fiji"],
+    rel: { [HIN]: .87, [ISL]: .04, [SIK]: .03, [JAIN]: .03, [CHR]: .03 },
+    ethNote: "North Indian surnames often derive from Sanskrit titles, traditional community or clan names, or occupations. Many are shared across Hindi, Punjabi and other northern language communities.",
+    ctyNote: "India is home to the vast majority of these names. The Indian diaspora is the world's largest, with major communities in the US, UK, Canada, the Gulf states, Fiji, Mauritius and the Caribbean.",
+    relNote: "Most families with these surnames are Hindu by heritage. Some surnames, such as Jain, Kumar and Singh, cross religious lines." },
+  gujarati: { eth: "Gujarati (Indian)", cty: ["India (Gujarat)", "United Kingdom", "United States", "Kenya / Uganda", "Canada"],
+    rel: { [HIN]: .82, [JAIN]: .1, [ISL]: .05, [ZORO]: .03 },
+    ethNote: "Gujarati surnames like Patel (originally \"village headman\"), Shah, Mehta and Desai are very common. Some, like Contractor, Engineer or names ending in -wala, are associated with the small Parsi community.",
+    ctyNote: "Gujaratis are famous traders, with long-established communities in East Africa, the UK (Leicester, London), the US and Canada. Patel is among the most common Indian surnames abroad.",
+    relNote: "Gujarati families are mostly Hindu, with an influential Jain minority. Shah and Mehta are common among Jains. Parsi (Zoroastrian) families also descend from Gujarat, and Gujarati Muslim communities (Bohra, Khoja, Memon) share many surname forms.",
+    refine: { [ISL]: ["Gujarati Muslim", "India (Gujarat)", "gujarati_muslim"], [SHIA]: ["Gujarati Muslim", "India (Gujarat)", "gujarati_muslim"], [JAIN]: ["Gujarati Jain", "India (Gujarat)"], [ZORO]: ["Parsi", "India (Gujarat / Mumbai)"] } },
+  gujarati_muslim: { eth: "Gujarati Muslim (Bohra / Khoja / Memon)", cty: ["India (Gujarat)", "Pakistan (Karachi)", "Kenya / Tanzania", "United Kingdom", "Canada"],
+    rel: { [ISL]: .6, [SHIA]: .38, [HIN]: .02 },
+    ethNote: "Gujarati Muslim communities, including Dawoodi Bohras, Khojas and Memons, are historically trading communities from Gujarat and Kutch. Their surnames mix Gujarati forms (-ani, -ia, -ji, -wala occupational names such as Lokhandwala, \"iron dealer\") with Arabic and Persian ones.",
+    ctyNote: "These communities spread through Indian Ocean trade to Karachi, Mumbai, East Africa (Kenya, Tanzania, Uganda), and later the UK, Canada and the US. Many families moved from East Africa to Britain and Canada in the 1960s and 70s.",
+    relNote: "These communities are Muslim. Memons are mostly Sunni, while Bohras and Khojas are largely Shia (Musta'li Ismaili for Dawoodi Bohras, Nizari Ismaili or Twelver for Khojas)." },
+  sindhi: { eth: "Sindhi", cty: ["Pakistan (Sindh)", "India (Gujarat, Maharashtra)", "United Arab Emirates", "United Kingdom", "Hong Kong / Indonesia"],
+    rel: { [ISL]: .5, [HIN]: .45, [SIK]: .05 },
+    ethNote: "Many Sindhi surnames end in -ani, meaning \"descendant of\", as in Advani from an ancestor named Adu. Others, like Bhutto, Soomro and Talpur, are tribal names.",
+    ctyNote: "Sindh is now in Pakistan. Most Sindhi Hindus moved to India in 1947, and Sindhi merchant families settled worldwide, including in Dubai, Hong Kong, Indonesia, Spain (Canary Islands) and the UK.",
+    relNote: "Sindhis in Pakistan are mostly Muslim, with strong Sufi traditions. Sindhis in India are mostly Hindu, and many also revere Guru Nanak. Surnames ending in -ani are common in both groups but especially among Hindu Sindhis." ,
+    refine: { [ISL]: ["Sindhi (Pakistani)", "Pakistan (Sindh)"], [HIN]: ["Sindhi Hindu", "India"] } },
+  marathi: { eth: "Marathi (Indian)", cty: ["India (Maharashtra)", "United States", "United Kingdom"],
+    rel: { [HIN]: .83, [BUD]: .06, [ISL]: .06, [JAIN]: .02, [CHR]: .03 },
+    ethNote: "Marathi surnames often end in -kar (\"from a village\", as in Tendulkar or Gavaskar) or are clan names like Patil, Deshmukh, Jadhav and Pawar.",
+    ctyNote: "Most Marathi speakers live in Maharashtra, including Mumbai and Pune, with diaspora communities in the US and UK.",
+    relNote: "Most Marathi families are Hindu. Maharashtra also has India's largest Buddhist community, following the 1956 conversion movement led by B. R. Ambedkar." },
+  punjabi: { eth: "Punjabi", cty: ["India (Punjab)", "Pakistan (Punjab)", "Canada", "United Kingdom", "United States"],
+    rel: { [SIK]: .55, [HIN]: .32, [ISL]: .11, [CHR]: .02 },
+    ethNote: "Punjabi surnames are often clan (got) names, such as Gill, Sandhu, Sidhu and Dhillon. Singh (\"lion\") is used by all Sikh men and Kaur (\"princess\") by Sikh women, though Singh is also common among Hindu Rajputs.",
+    ctyNote: "Punjab was split between India and Pakistan in 1947. Large Punjabi communities live in Canada (Brampton and Surrey), the UK and California.",
+    relNote: "Punjabi families can be Sikh, Hindu or Muslim. Most Sikhs worldwide are Punjabi. On the Pakistani side of Punjab, families are mostly Muslim.",
+    refine: { [ISL]: ["Punjabi (Pakistani)", "Pakistan", "sa_muslim"], [SIK]: ["Punjabi Sikh", "India (Punjab)"], [HIN]: ["Punjabi Hindu", "India (Punjab)"] } },
+  bengali_hindu: { eth: "Bengali (Indian)", cty: ["India (West Bengal)", "Bangladesh", "United States", "United Kingdom"],
+    rel: { [HIN]: .88, [ISL]: .07, [CHR]: .03, [BUD]: .02 },
+    ethNote: "Many Bengali surnames are anglicized Sanskrit titles, for example Chatterjee (Chattopadhyay), Banerjee (Bandyopadhyay) and Mukherjee (Mukhopadhyay). Others, like Ghosh, Bose and Das, are old community names.",
+    ctyNote: "These names are concentrated in West Bengal and Kolkata, with some Hindu Bengali families in Bangladesh and diaspora in the US and UK.",
+    relNote: "These surnames are typical of Hindu Bengali families. A few, like Chowdhury, Sarkar and Biswas, are shared with Muslim Bengalis." },
+  bangladeshi: { eth: "Bengali (Bangladeshi)", cty: ["Bangladesh", "India (West Bengal)", "United Kingdom", "Saudi Arabia", "United States"],
+    rel: { [ISL]: .9, [HIN]: .08, [CHR]: .01, [BUD]: .01 },
+    ethNote: "Bangladeshi Muslim names often use Arabic-derived family names (Rahman, Hossain, Islam, Uddin) or Bengali honorifics like Chowdhury and Miah. Women often use Begum, Khatun or Akter.",
+    ctyNote: "The UK has a large Bangladeshi community (East London, from Sylhet), and many Bangladeshis work in the Gulf states.",
+    relNote: "About 90% of Bangladeshis are Muslim, mostly Sunni. Bangladesh also has a significant Hindu minority." },
+  south_indian: { eth: "South Indian (Tamil / Telugu / Kannada / Malayali)", cty: ["India (Tamil Nadu, Karnataka, Andhra Pradesh, Kerala)", "Sri Lanka", "Singapore", "Malaysia", "United States"],
+    rel: { [HIN]: .85, [CHR]: .08, [ISL]: .07 },
+    ethNote: "South Indian naming differs from the north. Many Tamils use a father's given name as a surname or initial, while community names like Iyer, Nair, Reddy and Rao, and endings like -an, -swamy and -murthy, are common.",
+    ctyNote: "Tamil communities are also long established in Sri Lanka, Singapore, Malaysia, Mauritius and South Africa. Telugu and Tamil professionals form a large part of the Indian community in the US.",
+    relNote: "Most South Indian families are Hindu. Kerala and Tamil Nadu have notable Christian and Muslim populations." },
+  malayali_christian: { eth: "Malayali (Kerala Christian)", cty: ["India (Kerala)", "United Arab Emirates", "United States", "United Kingdom"],
+    rel: { [CHR]: .88, [HIN]: .08, [ISL]: .04 },
+    ethNote: "Surnames like Varghese (George), Kurian (Cyriac), Chacko (Jacob) and Mathai (Matthew) are Malayalam forms of biblical names.",
+    ctyNote: "These names are concentrated in Kerala, with large expatriate communities in the Gulf, the US (Texas, New York) and the UK.",
+    relNote: "These names belong to Kerala's ancient Saint Thomas Christian communities (Syro-Malabar, Malankara Orthodox and Mar Thoma), which trace their origins to the 1st century." },
+  sa_muslim: { eth: "South Asian Muslim (Pakistani / Indian)", cty: ["Pakistan", "India", "Bangladesh", "United Kingdom", "United Arab Emirates"],
+    rel: { [ISL]: .82, [SHIA]: .15, [CHR]: .02, [HIN]: .01 },
+    ethNote: "These surnames are often Arabic or Persian in origin and can mark descent claims or titles: Syed and Sayyid (descendants of the Prophet), Qureshi (the Prophet's tribe), Siddiqui, Ansari, and Khan (a Turkic-Mongol title adopted widely, especially among Pashtuns).",
+    ctyNote: "These names are common in Pakistan and among India's 200 million Muslims. The UK has a large Pakistani community, especially in Birmingham, Bradford and Manchester.",
+    relNote: "Families with these surnames are overwhelmingly Muslim. Most are Sunni, while names like Rizvi, Naqvi, Zaidi and Jafri are often associated with Shia Sayyid families." },
+  afghan: { eth: "Afghan / Pashtun", cty: ["Afghanistan", "Pakistan (Khyber Pakhtunkhwa)", "Iran", "Germany", "United States"],
+    rel: { [ISL]: .88, [SHIA]: .12 },
+    ethNote: "Pashtun tribal names often end in -zai (\"descendant of\") or -khel (\"clan\"), for example Yousafzai, Durrani and Popalzai.",
+    ctyNote: "Pashtuns live on both sides of the Afghanistan–Pakistan border. Afghan refugee communities are large in Pakistan, Iran, Germany and the US.",
+    relNote: "Afghans are almost entirely Muslim. Most are Sunni, with a Shia Hazara minority." },
+  nepali: { eth: "Nepali", cty: ["Nepal", "India (Sikkim, Darjeeling)", "Bhutan", "United Kingdom", "Qatar"],
+    rel: { [HIN]: .78, [BUD]: .14, [ISL]: .04, [CHR]: .02, [TRAD]: .02 },
+    ethNote: "Nepali surnames often reveal community, for example Shrestha (Newar), Gurung, Tamang and Magar (hill peoples), Thapa and Karki (Chhetri), and Sherpa and Lama (Himalayan Buddhist).",
+    ctyNote: "Many Nepalis live in India, the Gulf states and Malaysia for work. Gurkha veterans' families form communities in the UK and Hong Kong.",
+    relNote: "Nepal is majority Hindu, with a significant Buddhist population, especially among Tamang, Sherpa, Gurung and Newar communities." },
+  sinhalese: { eth: "Sinhalese (Sri Lankan)", cty: ["Sri Lanka", "Australia", "United Kingdom", "Italy", "Middle East"],
+    rel: { [BUD]: .78, [CATH]: .15, [HIN]: .04, [ISL]: .03 },
+    ethNote: "Endings like -singhe (\"lion\"), -nayake (\"leader\") and -wardena are distinctively Sinhalese. Perera, Fernando and de Silva are Portuguese-era names adopted in the 16th and 17th centuries.",
+    ctyNote: "There are diaspora communities in Australia (Melbourne), the UK, Italy and the Gulf.",
+    relNote: "Most Sinhalese are Theravada Buddhist. Portuguese-derived surnames like Perera and Fernando are disproportionately common among Sri Lanka's Catholic community." },
+  chinese: { eth: "Han Chinese", cty: ["China", "Taiwan", "Hong Kong", "Singapore", "Malaysia"],
+    rel: { [FOLK]: .72, [BUD]: .16, [CHR]: .08, [ISL]: .02, [NONE]: .02 },
+    ethNote: "Chinese surnames are short and very concentrated. The top 100 cover about 85% of the population. Spellings vary by dialect and region: Chen (Mandarin pinyin), Chan (Cantonese), Tan (Hokkien/Teochew, common in Singapore and Malaysia).",
+    ctyNote: "Spelling hints at region. Pinyin forms (Zhang, Xu) suggest mainland China, Wade-Giles forms (Chang, Hsu) suggest Taiwan, and Cantonese or Hokkien forms (Wong, Tan, Lim) suggest Hong Kong, Southeast Asia, or older diaspora.",
+    relNote: "Most Chinese people report no formal religion but practice ancestor veneration and folk traditions that blend Buddhism, Taoism and Confucian ethics. Christianity is significant in Taiwan, Hong Kong and diaspora communities." },
+  korean: { eth: "Korean", cty: ["South Korea", "North Korea", "United States", "China (Yanbian)", "Japan"],
+    rel: { [NONE]: .5, [PROT]: .2, [BUD]: .16, [CATH]: .11, [FOLK]: .03 },
+    ethNote: "Korea has very few surnames. Kim, Lee (Yi) and Park make up nearly half the population. Given names are usually two Sino-Korean syllables, such as Min-jun or Ji-woo.",
+    ctyNote: "Large Korean diasporas live in the US (Los Angeles, New York), China, Japan and Central Asia (Koryo-saram).",
+    relNote: "About half of South Koreans report no religion. Protestant Christianity, Buddhism and Catholicism are the main faiths, and Christianity is especially strong among Korean Americans." },
+  japanese: { eth: "Japanese", cty: ["Japan", "United States (Hawaii, California)", "Brazil", "Peru"],
+    rel: { [SHIN]: .85, [NONE]: .1, [CHR]: .02, [BUD]: .03 },
+    ethNote: "Japanese surnames are usually two kanji describing landscapes, for example Yamamoto (\"base of the mountain\"), Tanaka (\"in the rice field\") and Matsumoto (\"base of the pine\"). Most were adopted by commoners after 1875.",
+    ctyNote: "Brazil has the largest population of Japanese descent outside Japan, about 2 million. Hawaii and California also have historic Japanese-American communities.",
+    relNote: "Most Japanese people take part in both Shinto and Buddhist customs, such as shrine visits and Buddhist funerals, while describing themselves as non-religious. Fewer than 2% are Christian." },
+  vietnamese: { eth: "Vietnamese (Kinh)", cty: ["Vietnam", "United States", "France", "Australia", "Canada"],
+    rel: { [FOLK]: .68, [BUD]: .15, [CATH]: .09, [NONE]: .05, [PROT]: .03 },
+    ethNote: "Nguyen is the surname of an estimated 38% of Vietnamese people, followed by Tran and Le. Many surnames trace to historical dynasties. In Vietnamese order the family name comes first.",
+    ctyNote: "Large Vietnamese diaspora communities formed after 1975 in California, Texas, France, Australia and Canada.",
+    relNote: "Ancestor worship and folk religion are nearly universal in Vietnam, often alongside Mahayana Buddhism. Vietnam also has one of Asia's larger Catholic communities, especially strong in the diaspora." },
+  filipino: { eth: "Filipino", cty: ["Philippines", "United States", "Saudi Arabia", "Canada", "United Arab Emirates"],
+    rel: { [CATH]: .79, [PROT]: .1, [ISL]: .06, [CHR]: .05 },
+    ethNote: "Most Filipino surnames are Spanish. An 1849 colonial decree assigned surnames from a catalog, which is why they are Spanish while ethnicity is Austronesian. Native Tagalog names (Macapagal, Dimaculangan) and Chinese-Filipino names (Tan, Sy, Cojuangco) also exist.",
+    ctyNote: "About 10 million Filipinos live or work abroad, especially in the US, the Gulf states, Canada and Japan.",
+    relNote: "The Philippines is Asia's largest Catholic country. Mindanao has a Muslim (Moro) minority." },
+  thai: { eth: "Thai", cty: ["Thailand", "United States", "Laos"],
+    rel: { [BUD]: .93, [ISL]: .05, [CHR]: .02 },
+    ethNote: "Thai surnames were mandated in 1913. Each family had to register a unique name, which is why Thai surnames are long, rare and often poetic Pali or Sanskrit compounds. Thais usually go by their given name or a nickname.",
+    ctyNote: "Thai surnames are almost exclusive to Thailand. Many Thai Chinese families adopted Thai surnames, sometimes keeping a clan element such as Sae-.",
+    relNote: "More than 90% of Thais are Theravada Buddhist. The far south has a Malay Muslim majority." },
+  indonesian: { eth: "Indonesian / Malay", cty: ["Indonesia", "Malaysia", "Netherlands", "Singapore"],
+    rel: { [ISL]: .86, [PROT]: .07, [CATH]: .03, [HIN]: .02, [BUD]: .02 },
+    ethNote: "Many Indonesians, especially Javanese, have only one name. Javanese names often end in -o or -anto for men and -wati or -i for women. Batak families in Sumatra keep clan names like Siregar, Nasution and Simanjuntak.",
+    ctyNote: "Indonesia is the world's fourth most populous country. Malay naming, with patronymic bin or binti, is shared with Malaysia and Brunei.",
+    relNote: "Indonesia has the largest Muslim population in the world. Batak Toba and eastern Indonesian communities are largely Christian, and Bali is Hindu." },
+  yoruba: { eth: "Yoruba (West African)", cty: ["Nigeria (southwest)", "Benin", "United Kingdom", "United States"],
+    rel: { [CHR]: .5, [ISL]: .45, [TRAD]: .05 },
+    ethNote: "Yoruba names are sentences with meaning. Ade- means crown or royalty, Olu- God or lord, Oluwa- God, and Ola- wealth. Adeyemi means \"the crown suits me\".",
+    ctyNote: "The Yoruba are one of Africa's largest ethnic groups, with about 45 million people in Nigeria and Benin. There are large communities in London, Houston and Atlanta.",
+    relNote: "The Yoruba are roughly split between Christianity and Islam, often within the same family, with traditional Ifá practice alongside both." },
+  igbo: { eth: "Igbo (West African)", cty: ["Nigeria (southeast)", "United Kingdom", "United States", "Cameroon"],
+    rel: { [CHR]: .95, [TRAD]: .04, [ISL]: .01 },
+    ethNote: "Igbo names often carry theological meaning. Chi or Chukwu means God, as in Chukwuemeka (\"God has done great\"), and Nwa- means child.",
+    ctyNote: "The Igbo homeland is southeastern Nigeria. There are large communities in Lagos, the UK, the US and across West Africa.",
+    relNote: "The Igbo are overwhelmingly Christian, largely Catholic and Anglican, among the most Christianized peoples in Africa." },
+  hausa: { eth: "Hausa-Fulani (West African)", cty: ["Nigeria (north)", "Niger", "Ghana", "Cameroon"],
+    rel: { [ISL]: .97, [CHR]: .02, [TRAD]: .01 },
+    ethNote: "Hausa and Fulani names are heavily shaped by Islam, using Arabic-derived names like Abubakar and Aliyu or Hausa names like Danjuma (\"born on Friday\").",
+    ctyNote: "Hausa is a lingua franca across the Sahel, from northern Nigeria and Niger to Ghana, Cameroon and Chad.",
+    relNote: "Hausa-Fulani communities are almost entirely Sunni Muslim." },
+  akan: { eth: "Akan / Ghanaian", cty: ["Ghana", "Côte d'Ivoire", "United Kingdom", "United States"],
+    rel: { [CHR]: .8, [ISL]: .12, [TRAD]: .08 },
+    ethNote: "Akan day names reveal the weekday of birth. Kwame and Ama mean Saturday, and Kofi and Afua mean Friday. Surnames like Mensah (\"third son\"), Owusu and Asante are very common.",
+    ctyNote: "The Akan are Ghana's largest ethnic group. London and New York have the largest Ghanaian diaspora communities.",
+    relNote: "Ghana is mostly Christian, especially in the Akan south. Islam is concentrated in the north." },
+  east_african: { eth: "East African (Kenyan / Tanzanian / Ugandan)", cty: ["Kenya", "Tanzania", "Uganda", "United States", "United Kingdom"],
+    rel: { [CHR]: .84, [ISL]: .11, [TRAD]: .05 },
+    ethNote: "Kenyan names often point to community. Kikuyu names include Kamau and Mwangi, Luo names often start with O- for men and A- for women (Otieno, Achieng), and Kalenjin names start with Kip- for men and Chep- for women.",
+    ctyNote: "East African naming traditions are concentrated in Kenya, Tanzania and Uganda, with diasporas in the US, UK and Gulf states.",
+    relNote: "Kenya and Uganda are mostly Christian. Islam is significant along the Swahili coast and in Tanzania." },
+  ethiopian: { eth: "Habesha (Ethiopian / Eritrean)", cty: ["Ethiopia", "Eritrea", "United States", "Israel", "Saudi Arabia"],
+    rel: { [ETHO]: .55, [ISL]: .32, [PROT]: .12, [TRAD]: .01 },
+    ethNote: "Ethiopians and Eritreans use the father's given name in place of a surname. Many names are theophoric (Gebre- \"servant of\", Wolde- \"son of\", Haile- \"power of\") or describe hope and blessing, such as Tesfaye (\"my hope\").",
+    ctyNote: "Large Ethiopian and Eritrean communities live in Washington, DC, Minneapolis, Israel (Beta Israel) and the Gulf.",
+    relNote: "The Ethiopian Orthodox Tewahedo Church is one of the oldest Christian churches. Islam is also major, and Protestant (P'ent'ay) churches are growing. Names like Gebre- and Wolde- are explicitly Christian." },
+  sahel: { eth: "West African (Mandé / Fula / Wolof / Mossi)", cty: ["Mali", "Senegal", "Guinea", "Burkina Faso", "Côte d'Ivoire", "France"],
+    rel: { [ISL]: .85, [CHR]: .1, [TRAD]: .05 },
+    ethNote: "Surnames like Traoré, Keïta, Diallo, Diop and Ouédraogo are clan or lineage names (jamu) that often show ethnic group: Mandé (Keïta, Traoré, Coulibaly), Fula (Diallo, Barry, Bah, Sow), Wolof (Diop, Ndiaye, Fall) and Mossi (Ouédraogo, Sawadogo, Kaboré).",
+    ctyNote: "These names cross the borders of former French West Africa. France has large Malian, Senegalese and Ivorian communities, and New York has a growing one.",
+    relNote: "The Sahel is mostly Sunni Muslim, often with Sufi brotherhoods such as the Mourides and Tijaniyya in Senegal. Burkina Faso and Côte d'Ivoire have large Christian minorities, and traditional religion persists in many areas." },
+  somali: { eth: "Somali", cty: ["Somalia", "Somaliland", "Ethiopia (Somali Region)", "Kenya", "United States"],
+    rel: { [ISL]: .99, [CHR]: .01 },
+    ethNote: "Somalis use a chain of given names (own name, father's, grandfather's) rather than a family surname. The Somali spelling system uses x for ḥ and c for ʿ, as in Xasan for Hassan and Cabdi for Abdi.",
+    ctyNote: "Large diasporas live in Minneapolis, Columbus, Toronto, London and Scandinavia.",
+    relNote: "Somalis are almost entirely Sunni Muslim (Shafi'i school)." },
+};
+
+/* ---------- Surname reference lists (normalized, no spaces) ---------- */
+const S = {
+  anglo: "smith johnson williams brown jones miller davis wilson anderson taylor thomas moore jackson white harris clark lewis robinson walker hall allen young king wright hill scott green adams baker nelson carter mitchell roberts turner phillips parker evans edwards collins stewart morris rogers cook morgan bell cooper richardson cox howard ward peterson gray grey watson brooks wood bennett barnes ross henderson coleman jenkins perry powell long patterson hughes washington butler simmons foster bryant alexander russell griffin hayes myers ford hamilton graham wallace west cole woods ellis gibson stone fisher palmer knight shaw holmes rice hunt black mills porter dixon hunter warren fox rose chapman spencer webb hart lane payne armstrong carpenter fletcher harper wheeler lee thompson martin jefferson lincoln hopkins atkinson barker bishop booth chandler cunningham dawson fowler gardner hawkins lawrence marshall nichols pearson reynolds sanders shepherd simpson stevens sutton tucker wade walsh(irish) wells whitaker winter",
+  irish: "murphy kelly sullivan osullivan walsh byrne obyrne ryan oconnor connor obrien brien kennedy lynch murray quinn mccarthy doyle gallagher ogallagher doherty odoherty donnelly kavanagh reilly oreilly brennan fitzgerald nolan daly dunne flanagan keane casey sweeney hogan regan oneill neill healy duffy farrell burke maher power malone mahony omahony kearney cullen hennessy brady boyle carroll mcmahon dempsey fitzpatrick moran whelan sheehan crowley gorman connolly tierney devlin mulligan finnegan cassidy flynn hickey keegan donovan odonovan mcnamara mcguire maguire mcgrath kennedy",
+  scottish: "campbell stewart robertson thomson macdonald mcdonald murray maclean mclean mackenzie mckenzie mackay ferguson fraser grant cameron sinclair munro douglas gordon hamilton ross buchanan kerr johnston crawford wallace burns lindsay drummond mcleod macleod forbes mcgregor macgregor sutherland erskine dunbar galbraith menzies urquhart lamont mackintosh mcintosh",
+  welsh: "jones williams davies evans thomas roberts hughes lewis morgan griffiths price lloyd rees jenkins owen owens powell pritchard bowen parry vaughan howells llewellyn probert pugh prosser",
+  german: "muller mueller schmidt schneider fischer weber meyer wagner becker schulz hoffmann hofmann schafer koch bauer richter klein wolf schroder neumann schwarz zimmermann braun kruger hartmann lange werner krause lehmann schmitt schmid kohler maier herrmann konig walter fuchs keller vogel friedrich gunther frank berger winkler roth lorenz baumann beck kaiser busch kraus voigt jung brandt hahn graf dietrich engel kuhn albrecht huber ziegler mayer weiss schwartz",
+  dutch: "dejong jong devries vries vandenberg vandijk bakker janssen visser smit meijer deboer mulder degroot bos vos hendriks vanleeuwen dekker brouwer dewit dijkstra smits degraaf vanderlinden kok dehaan vermeulen vandenheuvel vanderveen vandenbroek bosch vanbeek kuipers veenstra hoekstra schouten vanvliet prins postma vandermeer",
+  afrikaner: "vandermerwe botha pretorius venter coetzee duplessis nel steyn fourie joubert kruger swanepoel erasmus viljoen potgieter bezuidenhout oosthuizen labuschagne engelbrecht strydom malan leroux dutoit cronje vanwyk vanzyl badenhorst delport grobler",
+  swedish: "andersson johansson karlsson nilsson eriksson larsson olsson persson svensson gustafsson pettersson jonsson jansson hansson bengtsson lindberg lindstrom lindqvist lindgren bergstrom lundberg lundgren sandberg sjoberg wallin engstrom ekstrom holmberg nystrom isaksson forsberg",
+  danonorwegian: "hansen johansen olsen larsen andersen pedersen nilsen kristiansen jensen karlsen johnsen pettersen eriksen haugen hagen johannessen andreassen jacobsen dahl halvorsen solberg bakke lie moen christensen rasmussen sorensen jorgensen madsen kristensen poulsen thomsen mortensen",
+  finnish: "korhonen virtanen makinen nieminen makela hamalainen laine heikkinen koskinen jarvinen lehtonen lehtinen saarinen salminen heinonen niemi heikkila kinnunen salonen turunen salo laitinen tuominen rantanen karjalainen jokinen mattila savolainen lahtinen ahonen raikkonen",
+  icelandic: "gudmundsson jonsdottir sigurdsson gudmundsdottir sigurdardottir magnusson olafsson",
+  french: "bernard dubois petit durand leroy moreau simon laurent lefebvre michel bertrand roux vincent fournier morel girard andre lefevre mercier dupont lambert bonnet francois legrand garnier faure rousseau blanc guerin henry roussel nicolas perrin morin mathieu clement gauthier dumont fontaine chevalier robin masson boyer denis lemaire duval joly gautier roger roche dupuis leclerc giraud tremblay gagnon cote bouchard pelletier lavoie fortin beaulieu thibodeaux arceneaux boudreaux martin",
+  italian: "rossi russo ferrari esposito bianchi romano colombo ricci marino greco bruno gallo conti deluca costa giordano mancini rizzo lombardi moretti barbieri fontana santoro mariani rinaldi caruso ferrara galli martini leone longo gentile martinelli vitale lombardo serra coppola desantis damico marchetti parisi villa conte ferri fabbri bianco marini grasso valentini messina sala derosa gatti pellegrini palumbo sanna farina rizzi monti cattaneo morelli amato silvestri mazza testa grassi pellegrino carbone giuliani benedetti barone rossetti caputo montanari guerra palmieri bernardi martino fiore deangelis ferraro fumagalli sorrentino",
+  spanish: "garcia rodriguez gonzalez fernandez lopez martinez sanchez perez gomez jimenez ruiz hernandez diaz moreno alvarez munoz romero alonso gutierrez navarro torres dominguez vazquez ramos gil ramirez serrano blanco molina morales suarez ortega delgado castro ortiz rubio marin sanz nunez iglesias medina garrido cortes castillo santos lozano guerrero cano prieto mendez cruz flores herrera pena leon marquez cabrera gallego calvo vidal campos reyes vega fuentes carrasco diez aguilar caballero nieto santana pascual herrero mendoza rivera rojas chavez vargas espinoza salazar contreras sandoval guzman soto figueroa luna avila acosta estrada velasquez valdez cardenas maldonado ochoa zamora villanueva",
+  portuguese: "silva santos ferreira pereira oliveira costa rodrigues martins sousa souza fernandes goncalves gomes lopes marques alves almeida ribeiro pinto carvalho teixeira moreira correia mendes nunes soares vieira monteiro cardoso rocha raposo neves coelho cunha pires reis simoes antunes matos fonseca machado araujo barbosa tavares lourenco azevedo freitas magalhaes",
+  polish: "nowak kowalski wisniewski wojcik kowalczyk kaminski lewandowski zielinski szymanski wozniak dabrowski kozlowski jankowski mazur kwiatkowski krawczyk piotrowski grabowski nowakowski pawlowski michalski nowicki adamczyk dudek zajac wieczorek jablonski krol majewski olszewski jaworski wrobel malinowski pawlak witkowski walczak stepien gorski rutkowski michalak sikora ostrowski baran duda szewczyk tomaszewski pietrzak marciniak wroblewski zalewski jakubowski jasinski zawadzki sadowski bak chmielewski wlodarczyk borkowski czarnecki sawicki sokolowski kubiak maciejewski szczepanski kucharski wilk kalinowski lis mazurek wysocki kazmierczak sobczak cieslak glowacki kolodziej sikorski krajewski szulc",
+  russian: "ivanov smirnov kuznetsov popov vasiliev petrov sokolov mikhailov novikov fedorov morozov volkov alekseev lebedev semenov egorov pavlov kozlov stepanov nikolaev orlov andreev makarov nikitin zakharov zaitsev soloviev borisov yakovlev romanov sergeev kuzmin frolov dmitriev korolev gusev kiselev ilyin sorokin medvedev putin lenin pushkin tolstoy",
+  ukrainian: "shevchenko kovalenko bondarenko tkachenko kravchenko kovalchuk boyko oliynyk shevchuk koval polishchuk bondar tkachuk moroz marchenko lysenko rudenko savchenko petrenko melnyk klymenko pavlenko levchenko kharchenko sydorenko yurchenko karpenko vasylenko zinchenko kuzmenko ponomarenko zelensky zelenskyy",
+  czech: "svoboda novotny dvorak cerny prochazka kucera vesely horak nemec marek pospisil hajek jelinek kral ruzicka benes fiala sedlacek dolezal zeman kolar navratil cermak vanek blaha kriz sykora novak",
+  south_slavic: "horvat kovacevic babic maric juric kovacic vukovic knezevic markovic petrovic matic tomic pavlovic bozic blazevic grgic jovanovic nikolic ilic djordjevic stojanovic stankovic popovic milosevic zivkovic todorovic hodzic hadzic begic mehmedovic delic suljic halilovic hasanovic omerovic djokovic modric",
+  greek: "papadopoulos papadakis georgiou dimitriou nikolaou konstantinou ioannou papageorgiou vlachos oikonomou angelopoulos pappas alexiou christodoulou karagiannis makris mavros antoniou athanasiou",
+  romanian: "popescu ionescu popa pop radu dumitru stan stoica gheorghe matei ciobanu munteanu rusu constantin moldovan mihai florea lazar dinu ene sandu barbu nistor tudor ilie",
+  hungarian: "nagy kovacs toth szabo horvath varga kiss molnar nemeth farkas balogh papp takacs juhasz lakatos meszaros olah racz fekete szilagyi torok feher balazs gal kis szucs kocsis pinter fodor szalai sipos magyar lukacs gulyas biro kiraly katona jakab sandor boros fazekas kelemen antal orban veres",
+  baltic: "kazlauskas jankauskas petrauskas stankevicius vasiliauskas zukauskas butkus paulauskas urbonas kavaliauskas berzins kalnins ozolins jansons ozols liepins krumins balodis",
+  albanian: "hoxha berisha krasniqi gashi shala rama meta dervishi kelmendi morina hasani bytyqi leka kola prifti thaci basha ahmeti",
+  armenian: "sarkissian petrosyan grigoryan hakobyan harutyunyan kardashian",
+  georgian: "beridze kapanadze gelashvili maisuradze giorgadze lomidze tsiklauri bolkvadze",
+  turkish: "yilmaz kaya demir sahin celik yildiz yildirim ozturk aydin ozdemir arslan dogan kilic aslan cetin kara koc ozkan simsek polat erdogan korkmaz ozcan cakir erdem bulut guler gunes aksoy tekin keskin unal",
+  arab: "alrashid rashid hassan hussein mansour nasser khalil saleh salem ibrahim abdullah mahmoud aziz hamad hamdan khalifa farouk said saeed othman ismail youssef yousef mustafa mostafa ahmed mohammed mohamed muhammad ali omar awad darwish jaber qasim kassem najjar sabbagh tahan masri hijazi shamsi hashemi sultan bakr zaki taha naguib fahmy elsayed abdelrahman abdelaziz haddad abbas",
+  levant_christian: "khoury khouri elkhoury haddad nassar touma boutros hanna maalouf gemayel aoun abboud karam sfeir chamoun frangieh saliba bitar azar ghosn rizk mikhail",
+  persian: "hosseini mohammadi ahmadi rezaei moradi karimi jafari rahimi hashemi mousavi kazemi ghasemi heidari sadeghi rostami bagheri shirazi tehrani esfahani ebrahimi nazari amini akbari khamenei rouhani pahlavi farahani",
+  jewish: "cohen kohn cohn katz levy levi levine levin goldberg goldstein goldman rosenberg rosen rosenthal friedman schwartz weiss shapiro horowitz rabinowitz kaplan feldman greenberg silverman bernstein epstein blum hirsch gold wolfson adler finkelstein lieberman rubin rubinstein segal sachs zuckerman abramson perlman landau grossman lowenstein weinstein weinberg eisenberg rothschild steinberg",
+  sephardic: "bendavid benami mizrahi peretz biton dahan azoulay ohayon amsalem elkayam avraham shalom sasson nahum abergel dayan benjamin cohen",
+  north_indian: "sharma verma gupta agarwal agrawal kumar yadav mishra tiwari pandey srivastava shukla chauhan thakur saxena chaturvedi dubey dwivedi tripathi jain bansal garg goel mittal rastogi tandon sinha jha prasad rathore rajput bhatia malhotra kapoor khanna chopra arora mehra sethi kohli tyagi chaudhary choudhary singh gautam",
+  gujarati: "patel shah desai mehta joshi parikh trivedi modi gandhi amin bhatt panchal thakkar dave vyas pandya soni mistry contractor engineer wadia tata daruwala batliwala irani godrej bharucha dastur",
+  marathi: "patil deshpande kulkarni gokhale deshmukh jadhav pawar shinde gaikwad chavan bhosale apte phadke ranade sawant kale nikam tendulkar gavaskar joshi",
+  punjabi: "singh kaur gill sandhu sidhu dhillon grewal bains brar virk sekhon bhullar chahal randhawa johal atwal ahluwalia bedi sohal sangha cheema bajwa dhaliwal kang toor aulakh khaira hundal mann",
+  bengali_hindu: "chatterjee chattopadhyay banerjee bandyopadhyay mukherjee mukhopadhyay ganguly bose basu das dutta datta ghosh sen roy chakraborty chakrabarti bhattacharya bhattacharjee majumdar mazumdar sarkar chowdhury mitra guha dey nandi saha mondal biswas sengupta dasgupta haldar tagore",
+  bangladeshi: "rahman hossain islam uddin begum akter akhter miah mia khatun alam haque hoque sarker talukder bhuiyan mollah sikder chowdhury biswas",
+  south_indian: "iyer iyengar nair menon pillai reddy naidu rao krishnan subramanian subramaniam venkatesan raman ramanathan srinivasan rajan natarajan narayanan balasubramanian ganesan murugan sundaram chandrasekhar sastry shastri hegde shetty gowda kamath bhat pai acharya nambiar kurup panicker nadar chettiar gounder raju varma ramaswamy venkataraman swaminathan pichai nadella",
+  malayali_christian: "varghese verghese kurian chacko mathai cherian koshy oommen eapen kuruvilla kuriakose",
+  sa_muslim: "khan ahmed ahmad qureshi siddiqui ansari sheikh shaikh syed sayed hussain malik chaudhry butt mirza baig beg raza rizvi naqvi zaidi jafri abbasi hashmi farooqui farooqi iqbal akhtar javed aslam nawaz bhatti awan rehman rahman mahmood masood shah haider hyder kazmi gilani jilani niazi khattak memon lakhani",
+  afghan: "popal durrani karzai ghani yousafzai wardak barakzai popalzai sultani hotak noorzai achakzai stanekzai amiri safi shinwari afridi",
+  nepali: "shrestha thapa gurung tamang rai magar adhikari karki bhattarai koirala pradhan shakya lama sherpa poudel paudel khadka basnet bhandari dahal ghimire kc maharjan bajracharya limbu subedi pokharel aryal chhetri neupane",
+  sinhalese: "perera fernando desilva wickramasinghe jayasuriya bandara dissanayake senanayake rajapaksa gunawardena jayawardena ranasinghe herath wijesinghe rathnayake jayasinghe gunasekara samarasinghe karunaratne",
+  chinese: "wang li zhang liu chen yang huang zhao wu zhou xu sun ma zhu hu guo he lin gao luo zheng liang xie song tang han feng deng cao peng zeng xiao tian dong yuan pan cai jiang yu du ye cheng wei su lu ding ren shen yao jin fu zhong cui tan lam wong chan cheung leung lau ho ng tsang chow yip kwok chiu tse fung kwan mak lo yuen siu tsui chu tam au teo lim goh ong koh chua lee chang chong chin hsu tsai kuo lai hsieh chiang",
+  korean: "kim park lee choi jung jeong kang cho jo yoon yun jang lim han oh seo shin kwon hwang ahn song jeon hong yoo ko moon yang son bae baek heo nam noh ha kwak sung cha joo woo min ryu na jin um chae won chun",
+  japanese: "sato suzuki takahashi tanaka watanabe ito yamamoto nakamura kobayashi kato yoshida yamada sasaki yamaguchi matsumoto inoue kimura hayashi shimizu yamazaki mori abe ikeda hashimoto yamashita ishikawa nakajima maeda fujita ogawa goto okada hasegawa murakami kondo ishii saito sakamoto endo aoki fujii nishimura fukuda ota miura fujiwara okamoto matsuda nakagawa nakano harada ono tamura takeuchi kaneko wada nakayama ishida ueda morita hara shibata sakai kudo yokoyama miyazaki miyamoto uchida takagi ando taniguchi maruyama imai takada fujimoto takeda murata ueno sugiyama masuda hirano kojima chiba kubo matsui iwasaki sakurai kinoshita noguchi matsuo nomura kikuchi sano sugimoto arai",
+  vietnamese: "nguyen tran le pham hoang huynh phan vu vo dang bui do ho ngo duong ly truong dinh lam mai trinh",
+  filipino: "delacruz dizon manalo bautista pangilinan macapagal magsaysay aquino mangubat dimaculangan dimaano panganiban lacson tolentino salonga sison tiongson cojuangco manalastas delarosa delossantos delosreyes macaraeg ocampo soriano lagman sy",
+  thai: "srisai saetang shinawatra chanocha wongsawat ratanakul suwannarat srisuk boonmee sukprasert charoenphon",
+  indonesian: "suharto sukarno susilo sutrisno setiawan wijaya santoso gunawan hidayat kusuma purnomo prasetyo nugroho saputra siregar nasution simanjuntak situmorang sitompul hutapea harahap widodo wibowo hartono lubis tanjung pratama",
+  yoruba: "adeyemi adebayo adewale ogunleye oladipo olawale oyelaran ajayi afolabi babatunde bakare balogun adeleke akinola fashola obasanjo oyedepo ojo ogundipe adesanya alabi olatunji salami ayodele",
+  igbo: "okonkwo okafor okoro eze nwosu chukwu obi nnamdi okeke nwachukwu onyeka okoye ezeh nwankwo emeka anyanwu achebe azikiwe ekwueme ibe igwe iwu mbah ndukwe nweke obiora ogbonna okolie onuoha udeh",
+  hausa: "abubakar bello danjuma sani garba usman musa aliyu shehu dangote bala dikko abdullahi tanko umar buhari yaradua atiku gambo jibril kabiru lawal suleiman",
+  akan: "mensah boateng owusu asante osei agyeman appiah ofori amoah darko acheampong addo annan asamoah boakye frimpong gyamfi kuffour kufuor nkrumah opoku sarpong yeboah adjei amponsah quaye quartey lamptey tetteh agyei antwi baah danso donkor kyei manu nyarko",
+  east_african: "kamau mwangi njoroge kariuki kimani wanjiru otieno ochieng odhiambo onyango omondi okoth owino rotich koech mutua musyoka wambua mugo muthoni nyambura achieng akinyi atieno wekesa wafula barasa kenyatta odinga ruto museveni mwai kibaki magufuli nyerere mwinyi wanjiku njeri",
+  ethiopian: "tesfaye haile alemu bekele girma tadesse gebre gebremariam gebremedhin wolde woldemariam mengistu desta abebe kebede tekle teklu getachew assefa mekonnen berhane berhe yohannes negash tsegaye ayele demissie tefera worku zewdu",
+  somali: "warsame jama mohamud abdi aden egal guled hirsi elmi duale dahir farah abdirahman abdullahi nur noor abdulle samatar adan",
+};
+
+/* ---------- Given-name reference lists ---------- */
+const G = {
+  anglo: "john james robert michael william david richard joseph thomas charles christopher daniel matthew anthony mark donald steven paul andrew joshua kenneth kevin brian george timothy ronald edward jason jeffrey ryan jacob gary nicholas eric jonathan stephen justin scott brandon benjamin samuel gregory alexander frank patrick raymond jack dennis tyler aaron henry adam douglas nathan peter zachary kyle walter harold jeremy ethan keith roger austin noah logan wayne ralph bradley mary patricia jennifer linda elizabeth barbara susan jessica sarah karen lisa nancy betty margaret sandra ashley kimberly emily donna michelle carol amanda dorothy melissa deborah stephanie rebecca sharon laura cynthia kathleen amy angela shirley brenda pamela emma nicole helen samantha katherine christine rachel carolyn janet catherine heather diane ruth julie olivia victoria kelly lauren megan hannah abigail madison grace charlotte brittany kayla amber",
+  irish: "sean seamus siobhan niamh padraig ciaran ciara aoife saoirse eoin oisin cormac declan fergal liam roisin sinead orla aisling caoimhe darragh eamon eamonn colm brendan colleen maeve",
+  scottish: "hamish iain angus callum alasdair alistair fiona morag ewan euan kirsty mhairi isla lachlan murdo catriona eilidh",
+  welsh: "rhys gareth dafydd bronwen cerys ffion gethin iwan aled bryn carys emyr eleri glyn gwen gwyneth huw idris ieuan owain sian tegan",
+  german: "hans jurgen klaus wolfgang dieter heike uwe gunther helmut horst lothar manfred rainer reinhard siegfried ulrich volker wilhelm friedrich gerhard ludwig gisela hannelore ursula birgit dagmar sabine silke anke ute kerstin torsten matthias florian tobias lukas felix maximilian moritz johannes katrin franziska",
+  dutch: "pieter willem joost bram daan sem thijs luuk stijn wouter maarten koen sander jeroen hendrik marieke anouk femke lotte sanne fleur bas rutger gerrit kees",
+  swedish: "sven lars erik nils ingrid sigrid karl anders johan per olof gustav magnus mats bjorn astrid karin elin linnea maja ebba frida malin ulla birgitta agneta",
+  danonorwegian: "ole knut kjell bjarne terje rune morten soren mette kirsten hanne trine solveig ingeborg ragnhild torbjorn haakon espen asbjorn frode",
+  finnish: "juha jukka mikko matti pekka antti timo kari jari heikki jussi tuomas ville teemu sami ilkka harri aino liisa riikka tuula paivi satu sari minna tiina eeva kaisa aleksi eetu onni",
+  icelandic: "sigurdur gudmundur olafur einar bjarki thora sigridur gudrun helga ragnheidur",
+  french: "jean pierre jacques francois philippe alain christophe sebastien julien guillaume mathieu thierry olivier pascal laurent stephane frederic yves didier gilles benoit etienne remi rene marcel claude isabelle nathalie sylvie veronique christelle sandrine celine aurelie amelie camille chloe manon lea juliette margaux helene brigitte genevieve monique mathilde elodie emilie oceane",
+  italian: "giuseppe giovanni mario luigi francesco angelo vincenzo pietro salvatore carlo franco domenico paolo michele giorgio aldo luciano marco alessandro matteo lorenzo luca davide riccardo stefano massimo gianluca simone federico emanuele leonardo gabriele tommaso giulia francesca chiara federica alessia giorgia elisa silvia giuseppina concetta carmela antonella raffaella",
+  spanish: "jose juan carlos luis jorge miguel javier alejandro manuel francisco antonio pedro rafael fernando ricardo eduardo pablo diego alberto raul enrique ramon arturo hector oscar andres mateo santiago emiliano joaquin ignacio gonzalo alvaro lucia camila ximena guadalupe rosario dolores carmen pilar mercedes concepcion esperanza consuelo ana juana alejandra gabriela fernanda daniela jimena luz marisol yolanda jesus",
+  portuguese: "joao paulo goncalo tiago thiago rodrigo diogo duarte afonso joaquim vasco rui nuno marcelo leandro caio joana ines mariana leonor matilde conceicao graca luana larissa thais juliana bruna",
+  polish: "wojciech krzysztof tomasz piotr pawel marcin michal lukasz grzegorz jakub mateusz kamil bartosz andrzej jerzy stanislaw tadeusz zbigniew ryszard kazimierz dariusz slawomir maciej agnieszka malgorzata katarzyna ewa joanna magdalena aleksandra monika zofia halina krystyna jadwiga danuta grazyna dorota beata elzbieta urszula iwona justyna",
+  russian: "dmitri dmitry sergei sergey vladimir alexei aleksei andrei andrey mikhail nikolai yuri igor oleg pavel boris viktor anatoly gennady vyacheslav evgeny yevgeny maxim artem ilya kirill natalia natasha olga tatiana svetlana irina yekaterina ekaterina anastasia galina lyudmila ludmila ksenia yulia daria lyubov nadezhda",
+  ukrainian: "oleksandr oleksiy oleksandra taras bohdan mykola mykhailo vasyl volodymyr dmytro serhiy andriy yuriy petro ostap yaroslav oksana olena kateryna halyna nataliya iryna larysa lesya solomiya",
+  czech: "jiri jaroslav vaclav miroslav zdenek ladislav lubomir radek ondrej vojtech lenka hana jana petra lucie tereza marketa jitka zuzana",
+  south_slavic: "dragan nemanja milos dusan zoran slobodan srdjan vuk goran dejan zeljko predrag aleksandar jovana milica jelena dragana snezana ante ivica josip stjepan tomislav kresimir mate emir edin mirza haris almir kenan senad elvir amra amila lejla emina selma ajla enes dzenan novak",
+  greek: "georgios giorgos konstantinos dimitrios ioannis yannis nikos nikolaos panagiotis vasilis christos athanasios spyros stavros kostas thanos theodoros eleni aikaterini vasiliki angeliki dimitra eirini despina panagiota",
+  romanian: "ion ionut gheorghe vasile florin razvan catalin sorin alexandru andreea ioana mihaela florentina raluca roxana loredana",
+  hungarian: "laszlo istvan zoltan ferenc gyorgy janos sandor attila tibor gabor imre bela lajos miklos csaba balazs zsolt gergely erzsebet katalin ilona zsuzsanna agnes judit krisztina eszter zsofia reka timea",
+  baltic: "mindaugas giedrius vytautas audrius egle ruta ausra ieva janis andris juris maris ilze inese",
+  albanian: "arben artan besnik blerim driton fatmir gezim ilir valon visar agron arjeta blerina drita elona fatjona mimoza teuta valbona alban arlind",
+  armenian: "aram armen ashot gagik hayk hovhannes levon narek tigran vardan vahe arsen anahit armine gayane lilit nare siranush tatev",
+  georgian: "giorgi davit levan zurab irakli lasha nika nino ketevan tamuna eka natia",
+  turkish: "mehmet ahmet emre burak murat huseyin omer kemal recep serkan cem tolga ozgur onur ayse fatma emine hatice zeynep elif merve ozlem esra busra derya ebru",
+  arab: "walid nabil ziad fadi bassam hani rania hiba reem noura layla amal huda dina abdulrahman abdelrahman mahmoud tariq majid nasser samir rami",
+  levant_christian: "elias elie georges antoine boutros butros charbel maroun mireille joelle",
+  persian: "reza mehdi hossein dariush kourosh babak farhad behrouz bijan kambiz arash parviz shahram omid navid mohsen javad shirin parisa nasrin azadeh roya mahsa niloufar laleh shadi soraya yasaman fereshteh ladan",
+  jewish: "moshe mordechai yitzhak yitzchak shlomo avraham yaakov chaim menachem shmuel eliezer yehuda tzvi zvi dov aryeh baruch meir moishe nachum pinchas reuven shimon zalman zev rivka rivkah chana chaya devorah malka shoshana tova yehudit tzipora hershel mendel yossi",
+  sephardic: "yonatan noam itai eitan oren yael shira noa hadas orly liat ayelet",
+  north_indian: "rajesh ramesh suresh mahesh ganesh vishnu krishna lakshmi arjun rahul amit anil sunil vijay sanjay ajay deepak raj ravi shiva gopal hari ashok prakash manoj vinod rakesh mukesh dinesh naresh rohit ankit nikhil saurabh gaurav varun vikas akash aditya rohan vikram anjali pooja neha shreya divya kavya priya priyanka sunita anita geeta gita sita poonam rekha seema meena aarti swati shweta nisha ananya ishaan arnav aarav vivaan",
+  gujarati: "hitesh jignesh bhavesh nilesh paresh mitesh alpesh chirag dhaval hardik kunal parth jayesh kalpesh hetal falguni bhavna dhara hiral krupa nirali trupti foram jinal",
+  marathi: "sachin ashwini prathamesh omkar tejas aniket rutuja sneha vaishnavi aishwarya madhuri",
+  punjabi: "gurpreet harpreet manpreet jaspreet simranjit sukhwinder jaswinder baljinder kulwinder harjinder gurdeep gurinder gurmeet harbhajan jagmeet jagdeep navdeep navjot paramjit ranjit satnam inderjit amrinder sukhbir tejinder balwinder simran",
+  bengali_hindu: "debashis subhash sourav saurav arindam anirban abhijit sudipta sanjoy sanjib tapan partha soumya rituparna moumita sharmila sushmita tanushree dipankar rabindranath satyajit",
+  bangladeshi: "rafiqul shafiqul aminul mizanur habibur mahbub sohel shamim rubel jahid tanvir nusrat sumaiya taslima rokeya farzana",
+  south_indian: "venkatesh srinivas murali balaji karthik aravind arvind senthil saravanan murugan selvam meenakshi padma revathi kavitha lalitha sudha vani gayathri anitha janani nandini sowmya sindhu shalini preethi venkat raghav sriram nithya sundar",
+  sa_muslim: "imran irfan bilal hamza usman zeeshan kashif asif arif shahid rizwan junaid waqar tahir nadeem naveed sajid zahid fawad shoaib wasim waseem ayesha sana hira mahnoor bushra rabia saima nazia shazia uzma sadia mehwish iqra",
+  afghan: "gul wali zalmay zalmai mirwais nasrullah sharif massoud malalai pashtana zarghona wazhma mursal",
+  nepali: "bikash bibek prabin sujan anup bishal niraj dipesh pramila sabina sarita sushila pemba dawa tenzing pasang lhakpa",
+  sinhalese: "chaminda nuwan kasun lahiru mahinda gotabaya ruwan sanath dilshan thisara chathura nirosha chamari dilini sachini thilini nimal",
+  chinese: "wei ming jun hui ying fang jing yan lei hao xin jie mei ling qiang tao bo yi zhi hong jian ning ping xiu yong feng lan xiaoming xiaoli zihan yuxuan haoran yutong jiahui jiayi zhiwei junjie weiming kaiwen",
+  korean: "minjun seojun jiwoo jihoon hyun jaehyun sungmin seung younghee youngho dongho jungkook taehyung jisoo seoyeon soyeon hyejin eunji jiyeon minji sooyoung jiwon hyunwoo dohyun yejin haeun subin chaewon kyung",
+  japanese: "hiroshi takeshi kenji yuki haruto yuto sota yui aoi hina sakura akira kenta daisuke shota ryo naoki yuko keiko yoko kazuki takumi hiro masashi satoshi tomoko akiko emi ayumi haruka misaki kaori riku kaito mio kouki koji makoto ichiro jiro taro hideo noriko sachiko michiko reiko yumi megumi shinzo",
+  vietnamese: "minh thanh duc hung tuan anh linh huong thu trang phuong quang dung hoa khanh thao ngoc hai tien vinh hieu trung thuy hanh nhung huyen bao khoa phuc",
+  filipino: "rodel jericho jhun joselito marites maricel rowena arnel rommel reynaldo marlon jocelyn lorna rosalie jennylyn mariel analyn",
+  thai: "somchai somsak sompong somporn suda siriporn nattapong thanakorn kittisak pornthip wichai prasert chatchai malee niran apinya kanokwan nattaya pimchanok ratana sakda sunee supachai thanawat waraporn yupin",
+  indonesian: "budi agus dewi wahyu eko joko bambang putri ayu rizky intan siti nurul fitri indah dian rina bayu dimas fajar galih hendra iwan rudi teguh yudi",
+  yoruba: "oluwaseun seun olumide tunde babatunde ade adebayo ayodele ayo femi funmilayo funmi folake bisi bukola kemi kehinde taiwo yetunde damilola temitope tobi tolu wale segun kunle dayo gbenga jide",
+  igbo: "chinedu chukwuemeka emeka obinna nnamdi ikenna chidi chiamaka adaeze ngozi nneka uchenna ifeanyi kelechi chinonso ebuka chioma amaka ifeoma nkechi somto chinwe",
+  hausa: "aminu bashir yakubu hauwa habiba halima hadiza binta",
+  akan: "kwame kofi kwaku kwabena kwasi kojo yaw ama akua abena efua adwoa afua yaa akosua esi kwadwo kobina kweku ekow",
+  east_african: "baraka neema imani zawadi juma amani wanjiku njeri achieng akinyi kipchoge",
+  ethiopian: "abebe almaz meseret tigist hirut selam dawit yonas mulugeta tsehay berhanu tewodros genet mekdes yared betelhem kidist eyerusalem tsion fikru",
+  somali: "abdirahim abdikadir abdiaziz farhiya hodan ifrah halimo sahra hamdi caasha faadumo xasan maxamed cabdi ilhan",
+};
+
+/* ---------- Expanded reference lists (merged into S and G below) ---------- */
+const S_MORE = {
+  anglo: "abbott ackerman acton ainsworth aldridge allison ashby ashworth atkins austin bailey baldwin ball banks barber barlow barnett barrett barton bates baxter beck bentley berry blackburn blair blake bond bowman boyd bradley bradshaw brennan briggs bristow brock brooke buckley bull burgess burton bush byrd calloway carlisle carr carver chambers chase cheney clayton clements cobb coleman colby conway cooke corbett cotton crane crosby cross dale dalton daniels dean dennis dickens dodd doyle drake dudley duke dunn dyer eaton elliott emerson england farmer faulkner fenton field finch fleming ford forrest foster fowler francis fuller gale garner gates gilbert glover goodman goodwin gordon gough grant graves greene gregory grimes hale hammond hancock hanson harding hardy harmon harrington harvey hatcher hawthorne haywood hewitt hicks higgins hobbs hodges hogan holden holland holloway holt hooper horton house howell hubbard hudson huff hull humphrey hurst hutchinson ingram jacobs james jarvis jennings johns jordan judd keller kemp kent kerr kirby knapp lamb lambert lancaster lawson leach lester little lloyd lowe lucas lynch mann manning marsh mason matthews maxwell may mayo mccoy mead melton merritt miles monroe morton moss nash neal newman newton noble norman norris norton nugent oakley osborne owens page parsons patton paxton peck pennington perkins pierce pike pittman poole pope potter pratt preston quincy ramsey randall rawlings read reed reeves rhodes rich riley rivers robbins rowe rowland rush sampson saunders sawyer sexton sharp shelton sherman shields short skinner slater sloan snow sparks stafford stanley steele stephens stokes strickland summers swan sykes talbot tate thornton todd townsend tyler underwood vance wakefield walton warner waters watts weaver webster weeks welch whitney wilkins wilkinson willis winston wolfe woodward wyatt yates york",
+  irish: "barry bradley breen buckley cahill callaghan ocallaghan carey carney clancy coffey coleman collins conlon connell oconnell conroy considine corcoran costello cronin curran cusack daly delaney dillon dolan donahue donoghue odonoghue dowling driscoll odriscoll duggan egan fahey fallon feeney fennelly finn foley gaffney galvin geraghty gilmore glynn grady ogrady griffin hanley hanlon hayes hearn heffernan higgins horgan hurley joyce kane keating keenan kenny keogh kiernan kirwan lacey lally lane larkin lawlor leahy lenihan lonergan lowry madden mahon mangan mccann mccormack mcdermott mcdonagh mcgee mcgovern mckenna mclaughlin mcnally mcnulty meagher molloy monaghan mooney moriarty morrissey mulcahy mullen murtagh nagle naughton noonan oconor odea ohara oleary loughlin phelan quigley rafferty rooney ruane scanlon shanahan sheridan slattery tobin toomey treacy twomey ward whelan",
+  scottish: "aitken anderson baird bell blackwood boyd brodie bruce chisholm crichton cunningham dalgleish davidson dewar dickson duncan elliot findlay fleming gibb gilchrist gillespie gow graham guthrie henderson hendry hogg innes irvine jardine kennedy kirk laing leslie lockhart lyle mackie maclachlan macmillan mcmillan macpherson mcpherson macrae mair mcallister mcarthur mcbride mccallum mcculloch mcfarlane mcintyre mckay mckinnon mclaren mcneil mcqueen mcrae mitchell moffat morrison muir nairn ogilvie paterson rankin reid ritchie rutherford shaw sim skene smart somerville strachan thom urquhart watt wilson wishart wylie young",
+  german: "adler bader bartels baumgartner beyer bischof blum bohm brenner buchholz burkhardt dorn eberhardt eckert ehrlich eichhorn falk fink frey fritz geiger gerber goebel gross haas hagen hauser heinrich heller herzog hess hofer horn jager kahn kessler kirchner kluge knapp kolb kramer kraft kunz lang lindner lutz mack marx maurer meissner merkel metzger moser nagel nowak oswald otto pfeiffer pohl probst rausch reinhardt reuter ritter roth sauer schade scharf scholz schreiber schuster schwab seidel sommer stahl stark stein steiner strauss thiel ullrich vogt wahl walther weber wendt wenzel wiese wild wirth wolff zeller zimmer zinn",
+  dutch: "dejonge vanderberg vandenbosch vanderlaan vanderwal vandeven vanhouten vanderhoeven verhoeven willems wouters claes maes peeters goossens mertens jacobs dewilde aerts lemmens vermeersch",
+  french: "allard arnaud aubert barbier baron benoit berger besson blanchard bouvier brun caron carre charpentier chauvin colin collet courtois daniel delmas deschamps dumas etienne fabre fleury fontaine gaillard gauthier gerard gilbert girault guillaume hebert hubert jacob jacquet lacroix lebrun leclercq lecomte leduc lemoine leroux lucas marchand marechal mallet marie maillard meunier millet moulin noel olivier paris pasquier perret picard poirier poulain renard renaud rey riviere rolland royer sabatier schmitt tessier texier tournier vasseur vidal villeneuve weber",
+  italian: "abbate agostini albanese alberti aldini angeli antonelli arena bassi battaglia bellini benetti berti bianchini bonetti borghi bortolotti brambilla bruni buono calabrese campana cantoni capello carini carli casale castelli cavallo cecchi cerutti ciccone colonna corsi costantini crespi damato defilippis delgiudice donati esposito falcone fava ferrara ferrero fiorentino franchi gallo gatti gentili giannini giordano gori grimaldi guidi lanza lazzari leone lucchesi luciani mancuso manzoni marchi mariotti marra mattei mazzola melis migliore milani mondini mori napolitano negri neri orlando pace pagano palma parodi pastore pellegrino perrone piazza pini pirelli poli puglisi quaranta riva rizzo romeo rossini ruggiero russo salvi santini sartori savino scotti sorrentino spada tedesco tosi tucci vaccaro valente venturi vercelli zanetti zito",
+  spanish: "abreu acevedo adame aguirre alarcon alcala alfaro almonte alvarado amador andrade aranda arce arellano arias arroyo avalos ayala barajas barrera barrientos becerra beltran benitez bermudez bravo bustamante cabello calderon camacho campos canales carmona carrillo casas castaneda castellanos cervantes cisneros colon cordero cordova correa corona cuevas davila delacruz delarosa delgado duarte duran escobar esparza espinosa esquivel farias felix fierro franco galindo gallardo galvan gamez garza godinez granados guerra guevara herrera hidalgo huerta ibarra jaramillo juarez lara leal lima linares lozano lucero lugo macias madrigal magana manzano marquez mata mejia melendez mercado meza miranda montes montoya mora morales munguia murillo najera naranjo negrete nieves noriega olivares olvera orozco ortega osorio pacheco padilla palacios paredes parra pineda pizarro ponce portillo quintana quintero quiroz rangel rendon reyna rincon rios rocha rosales rosas saavedra salas salinas samaniego santiago sauceda segura sepulveda serna sierra solis solorzano tapia tejada toledo trejo trevino trujillo uribe valencia valenzuela valle velazquez venegas vera villa villalobos villarreal zapata zavala zuniga",
+  portuguese: "abrantes aguiar amaral amorim andrade baptista batista bento borges brandao brito cabral caldeira camara campos carneiro castro cerqueira correia couto dias domingues esteves estrela falcao faria farias figueiredo franco gaspar guerra guimaraes jardim leal leite lemos lobo loureiro macedo maia medeiros meireles melo moura nascimento nogueira paiva pacheco peixoto pimentel pinheiro prado quaresma queiroz rebelo rego resende sa sampaio santana seixas serrano sequeira siqueira tavares torres valente varela vasconcelos veloso viana xavier",
+  polish: "baranowski bielski bogdan borowski brzezinski chmiel cichocki ciesielski czajkowski domanski dziedzic fijalkowski gajda gorecki gutowski jarosz kaczmarek kaczynski kalisz kasprzak kowal kozak kubacki kurek laskowski lesniak lipinski makowski malecki markowski mazurkiewicz milewski mroz nowacki orlowski osinski pawelczyk pietrzyk przybylski rogalski sobczyk sowa stanczyk szczepaniak szymczak tomczak walczak wojciechowski wojtowicz wolski zajaczkowski zielony zuraw",
+  russian: "abramov agapov aksyonov alexandrov belov bogdanov bondarev bulgakov chekhov chernov davydov denisov dostoevsky efimov ershov fomin gagarin gorbachev grishin ignatov kalinin karpov kasparov klimov komarov kotov krylov kulikov lazarev lavrov makarov malakhov markov maslov melnikov mironov naumov nazarov nesterov nikiforov osipov panov pavlov platonov polyakov prokhorov rodionov rybakov safonov savin semyonov sharapova shirokov sidorov smolin sokolova stepanova tarasov tikhonov titov trofimov tsvetkov ulyanov vlasov voronin yeltsin zhukov",
+  ukrainian: "andrushchenko babenko bilyk boyarchuk demchenko didenko dovzhenko fedorenko gavrylyuk hnatyuk hrytsenko humeniuk ivanenko kozak kravets kuchma kushnir lytvyn martynenko matviyenko mazur myronenko nazarenko ostapenko poroshenko prokopenko romanenko semenko shapoval sobko stepanenko tymoshenko vovk yanukovych yushchenko zhuk",
+  south_slavic: "antic bajic bogdanovic cvetkovic dimitrijevic filipovic gavrilovic ivanovic jankovic jovic kostic lazic lukic maksimovic mihajlovic milic milojevic mitrovic nedeljkovic novakovic obradovic pejic perisic petkovic radovanovic radic rakitic savic simic sokolovic spasic stevanovic stojkovic tadic vasic vidovic vucic zoric alic avdic basic becirovic dzeko hasic ibric kadic mujic salihovic seferovic",
+  greek: "alexopoulos anagnostou andreou apostolou argyris chatzis christou dimopoulos economou galanis georgiadis giannakopoulos ioannidis kalogeropoulos karamanlis katsaros konstantinidis kostopoulos koutsoukos lambrou manolis markou michailidis mitsotakis nikolaidis panagiotopoulos papandreou papoutsis pavlidis petropoulos samaras sotiropoulos stavropoulos theodorou tsipras vasileiou zervas",
+  romanian: "albu andrei anghel avram badea balan bogdan bucur cazacu ciobotaru cojocaru constantinescu cristea dobre dragomir enache georgescu grigore iordache lungu manole marinescu mocanu negru nicolae oprea paun petrescu preda roman sima stanciu toma ursu vasile voicu",
+  turkish: "acar akin akkaya aktas altin altun arikan atalay ates avci aydogan balci baysal bayram bilgin bozkurt cakmak celebi coskun duman durmaz ekinci erdogdu ergun eroglu gok gokce gul gunduz guzel inan isik kahraman kalkan karaca karakaya kartal kaplan kocak kose kurtulus metin ocal ozbek ozer ozgur ozkaya pamuk sari sen sevim soylu tas tasdemir tekin toprak tunc turan ucar uysal yalcin yaman yavuz yazici yigit yuksel yurt zengin",
+  arab: "abboud abdallah abdelkader abdelhamid abdou abed abuali aboud adel alami alaoui alawi alhashimi alkhalifa almansouri almaktoum alnahyan alqasimi alsaud alshehri alzahrani alghamdi alharbi alotaibi alqahtani amrani ashour assaf atallah attia ayoub azzam badawi bakri barakat bashir belkacem benali benjelloun bennani berrada boukhari bouzid brahimi chahine cherif chraibi dabbagh daher dajani diab elamin elhadi elmasri elshamy fadel fakhoury farag fares fassi fawzi ghanem ghazal habib hafez hakim halabi hamdi hamid hammoud harb hariri hashem hassoun hijazi homsi idrissi issa jaafar jabbour jamal kabbani kanaan karim kassab khaled khatib khattab lahlou mahfouz makki maktabi mansouri marzouk mekki mohsen moussa mubarak nabil nader nasr nassif obeid omari othmani qasim radwan rahal ramadan saad sabri sadek safi sakr salah salameh samaha sayegh shaheen shaker shalabi sharif shehadeh suleiman tahir tamimi tazi tounsi wahab yassin younes zaher zaidan ziani zoubi",
+  persian: "abbasi afshar alavi amini ansari ardalan asadi azizi bahrami bakhtiari daneshvar davoudi eskandari farahani fardin farhadi ghaffari golestani habibi hamidi hosseinzadeh jalali javadi kamali kashani kermani khalili khosravi mahmoudi majidi mansouri mirzaei mohseni moradi najafi naderi nasseri navabi noori parsa pourmand rahmani rashidi razavi rezvani sabri safavi salehi samadi shahbazi sharifi soltani tabrizi taheri tavakoli vahidi yazdani zand zarei",
+  jewish: "abrams aronson auerbach baumann becker beilin berger berkowitz birnbaum bloom brodsky cantor diamond eisen engel feinberg fink fishman frankel fried geller gelman ginsberg glick gottlieb green gross gurevich halpern heller hoffman isaacs jacobson kaufman kessler klein kramer kraus lasker lerner lipman marcus margolis mendelsohn meyerowitz moskowitz nussbaum ostrow pearl perlstein pollack rabin reich rosenblum roth rothman salzman schechter scheinberg schiff schneider schulman seidel shulman siegel simon singer sokol sommer spector spiegel stern strauss sussman tannenbaum teitelbaum wasserman weber weil weisman wexler zimmerman",
+  north_indian: "agnihotri ahuja anand awasthi bajpai bajaj bhardwaj bhargava bhasin bisht chandra chauhan dhawan dixit gahlot goswami grover jaiswal jindal joshi juneja kakkar kashyap katiyar khurana kushwaha luthra madan mahajan maheshwari malik mathur mehrotra mittal nagpal negi oberoi pathak rai rajput rana rawat sabharwal sahni sachdeva sahu shrivastava sood suri talwar tewari thakur upadhyay vaid vashisht vij wadhwa yadav",
+  gujarati: "kapadia majithia lakhia gadhia vekaria kathiria savalia sorathia sutaria jariwala ghadiali bhanushali kotecha popat thakrar ruparelia raithatha chudasama jadeja vaghela solanki parmar makwana rathod gohil zala chavda dabhi vaja tank nathwani kotak sanghvi doshi vora gosalia chheda gala dedhia savla vasani ganatra pujara bhayani dholakia vadgama chotai unadkat jethwa odedra karia kerai varsani pindoria bhudia halai lad naik pandya rawal raval kanani dhanak thaker jogia ladva mandalia dattani chauhan bhalodia",
+  bengali_hindu: "acharjee adhikari bagchi bhowmick chanda chaudhuri dasgupta debnath goswami kar lahiri maitra mallick mandal mukerji nag palit pramanik raychaudhuri sanyal sarkar sinha sur",
+  south_indian: "achari annamalai arumugam bandi chandrasekaran chowdary dorai duraisamy elangovan gopalan govindarajan jayaraman kandasamy kannan karunanidhi kodali krishnamurthy kumaran lakshmanan mahadevan mani manickam muthu nadella naidu nimmagadda palaniswami parthasarathy perumal ponnusamy radhakrishnan raghavan rajagopal ramachandran ramakrishnan ramasamy rangarajan sankaran sekar selvaraj shanmugam sivakumar sridhar subbiah sundararajan thangaraj thiagarajan vaidyanathan velu venkataraman vijayakumar yadavalli gunturi kakarla kolli movva peddi pothineni ravuri talluri tummala vemuri",
+  sa_muslim: "abidi alvi ansari arain azmi bajwa bhutta chishti chughtai dar durrani farooq gondal gul hamdani hassan janjua jatoi kakar kamal kayani kazi khalil khokhar khwaja kiani kidwai lodhi madni mian minhas mughal nadvi nizami paracha pasha pathan qadri qazi quadri rajput rana rehmani sabri saeed sajid satti sethi sheikh sufi tarar usmani wani warraich yousuf zaman zubairi",
+  bangladeshi: "ahsan akand ali alom ansary babu barua dewan faruque howlader jahan kabir khondaker majumder matin munshi patwary prodhan rahim reza sarder shikder siddique sultana tarafder",
+  chinese: "bai bao cen chai chao chi chu dai di fan fei ge geng gong gu guan hao hou hua huo ji jia jian kang kong kuang lan lei leng lian liao long lou meng miao mo mu ni nie ning ou pang pei qi qian qiao qin qiu qu rao rong ruan shan shang shao shi shu si tao teng wan wen weng xia xiang xing xiong yan yao yi yin ying you yue zang zha zhan zhuang zou chung fong hui kam kan kwong lai lau leong li lui mok ngai pun sze tong wai wan yau yeung choi chua goh heng khoo koh liew loh low ng ong quek seah soh tay teh toh wee yeo",
+  vietnamese: "cao chau chu dao diep doan duong giang ha khuc kieu la lac lai luong luu mac nghiem ong quach ta thai thach tieu ton trieu tu van vuong",
+  korean: "baek byun choo chung eom gil gu ham hyun jeon jun ka kong kook lim maeng myung pyo seol shim sim so tae tak wang wi yeo yeom yim",
+  japanese: "akiyama amano aoyama arakawa asano baba doi ebihara fujikawa fukui hamada hattori higuchi hirata honda hoshino ichikawa iida imamura ishibashi iwata kanda kawaguchi kawakami kawamura kitamura koike komatsu kubota kurosawa kuwahara maeda mizuno mochizuki murai nagai nagata nakata narita nishida nishikawa noda ochiai ohashi okabe okubo onishi ozawa sakuma sawada seki shimada shinohara sugita suzuki takano takayama tanabe terada tsuchiya uchiyama umeda wakabayashi yamaguchi yamane yasuda yokota yoshikawa",
+  filipino: "agbayani dagdag dalisay delmundo ilagan lacson laurel legaspi macaraeg magbanua magno mallari manalang pacquiao panganiban quiambao rizal gonzales buenaventura esguerra evangelista guevarra samonte sarmiento tiongco ventura dumalagan bacani bagatsing",
+  yoruba: "abiodun abiola adebanjo adebayo adegoke adekunle adeniyi adeoye adesina adetunji adeyinka afolayan agboola ajibade akande akanbi akindele akinwale akinyemi alade aremu awolowo ayeni babalola bamidele bankole dada ilori ogunbiyi ogunlade ojo okunola oladele oladimeji olaniyan olayemi olowu oluwole omotayo onifade osinbajo oyebanji oyewole popoola sanni soyinka tinubu",
+  igbo: "agu akpan amadi anozie chikwe chukwuma dike ekwueme eze ezeani iwuchukwu madu mbanefo nduka nnaji nwafor nwokoye obi obiano obinna odili ogbu okafor okeke okonjo okorie okwu onwuachi onyekachi orji ozoemena uzoma",
+  hausa: "abdulkadir abdulsalami adamu ahmadu alhassan babangida bako balarabe danladi garba gwarzo hamza idris inuwa jega kano kwankwaso maikudi mamman nuhu rufai sambo shettima tukur yakasai zubairu",
+  akan: "acquah adomako agyapong amankwah ampofo anane ankomah ansah asamoah asare baffour bekoe bonsu dankwa duah fosu gyasi kusi mireku nkansah obeng ofosu oppong osei owusuansah sarfo twumasi wiredu yeboah",
+  east_african: "barasa chege gachanja gathoni githinji kahindi kamande kariuki kibet kipkemboi kiptoo kirui langat maina makori maranga mbugua mburu muchiri mugambi mugo muriuki musau mutai muthama mwende ndegwa ndungu ngugi njenga nyaga ochieng odongo ogola oloo omollo onyango otieno ouma owuor wairimu wambui wanjala",
+  somali: "abdillahi afrah ahmed artan awale aw barre bashir bile dirie fiqi gaas geedi gelle haji harun hussein isse jibril kahin muse mumin omar qalib roble said salad sheikh shire wardhere yasin",
+  ethiopian: "abera adane alemayehu amare ashenafi asfaw ayalew bayou belay birhanu dagne demeke fikre gebreyes gebreselassie getahun habtamu kassa lemma mamo melaku mesfin mulatu nega shiferaw sisay taye tilahun wondimu yimer zeleke",
+};
+S_MORE.gujarati_muslim = "memon lakhani virani jiwani dhanani hirani merchant bharmal lokhandwala poonawala attarwala vohra bohra mamdani jinnah premji noorani merali jaffer ladak kassam dewji dhalla nathani somji fazal tejani karmali khoja bhimani nanji chagla tyabji kachwala kapasi saifee bootwala fatehi ezzi rangwala sabuwala gheewala chinwala jivraj dhanji walji rajani kanji kassim moosa vahora";
+S_MORE.sahel = "ouedraogo sawadogo kabore compaore zongo ilboudo traore keita coulibaly kone konate toure camara diallo barry bah sow ba diop ndiaye fall faye gueye ndour cisse sylla sangare diarra doumbia sissoko dembele kante kouyate cissoko diakite fofana konare sall seck mbaye niang thiam wade senghor sankara";
+S_MORE.sindhi = "mahtani chainani harjani hinduja malkani rupani sadhwani sippy lulla tolani panjwani dadlani israni kalwani makhija sabnani uttamchandani valecha bulchandani nankani advani mirchandani lalwani bhagnani hiranandani motwani wadhwani kripalani jethmalani vaswani ramchandani sukhwani gidwani daswani chandiramani khilnani jagtiani thadani vaswani tahilramani keswani manglani gurnani bhojwani bhutto zardari soomro jatoi talpur mahar chandio junejo laghari magsi abro shah memon dahri pirzada";
+
+const G_MORE = {
+  anglo: "abbie alfie alice allison alyssa andrea anne annie archie arthur ava barry becky bethany beverly billy bonnie brad brett bridget brooke bruce caleb cameron candice carl carly carrie casey chad charlie chelsea cheryl chloe chris claire clara clifford cody colin connie courtney craig crystal curtis dale dana darren dave dawn dean debbie derek diana dominic don doris dustin dylan eddie edith eleanor ella ellie elsie emmett erica erin esther ethel eugene evan evelyn faith felicity florence freddie gavin gemma gene geoffrey gilbert glen gordon graham greg gwendolyn hailey harriet harry harvey hayley hazel heidi holly howard ian irene isaac jacqueline jade jake jamie jane janice jared jasmine jay jean jeff jenna jenny jesse jill jim jimmy joan joanne joel joey jordan josh joy joyce judith judy julia june karl kate katie kay keith kelsey ken kenny kerry kim kirk kristen kyle lance lee leo leslie lewis lily lindsay lloyd lois lorraine louise lucy luke lydia mabel maddie marcus margaret marian marjorie martha marvin matt maureen max maxine melanie melvin mia mike mildred miles millie milton mitchell molly morgan muriel nancy nathaniel neil nigel norman oliver oscar owen paige pamela parker pauline peggy penny phil phoebe phyllis piper poppy quentin rebecca reggie rhonda ricky rita rob robin rodney rosemary ross roxanne russell ruby sally sam scarlett seth shane shannon shawn sheila shelby sherry sidney simon sophie spencer stacy stanley stella stuart summer sydney tammy tara ted teresa terry theo theodore tiffany toby todd tom tony tracy travis trevor troy tyler valerie vanessa vernon vicky violet vivian wade wanda warren wendy wesley whitney wilbur winston yvonne zach",
+  german: "anja annegret bernd detlef dirk elke frauke gerd gudrun hartmut heinz helga herbert hildegard holger ilse ingeborg jochen jorg kai karsten klara knut lena lotte magdalena margarete marlene nadine norbert otto petra ralf reiner rolf rudiger sigrid stefanie sybille thorsten udo ulrike waltraud wilfried wolfram",
+  french: "adrien agnes alexandre alice anais arnaud aurelien baptiste bastien benedicte cedric charlotte clemence corentin cyril damien delphine dominique edouard eloise emeline esteban fabien fabrice florence gaelle gaspard gerard hugues jeanne jerome joel josephine lucien ludovic maxime melanie mireille morgane noemie patrice raphael regis romain sabine serge solene sylvain theo valentin virginie xavier yann",
+  italian: "agostino alberto alessia ambra amedeo anna arianna attilio benedetta bianca bruno carla caterina cesare claudia corrado cristiano daniele diego donatella edoardo elena enrico enzo ettore fabio fabrizio filippo fiorella flavio gaetano gianni gino giulio graziella guido ignazio ilaria lia livia loredana marcello margherita maurizio mirko nicola noemi orazio ornella pasquale piero renato roberta romano rosalia sabrina santo serena sofia teresa tiziana ugo umberto valerio vittoria vittorio",
+  spanish: "adriana agustin alejandro alfonso alicia amparo angel araceli armando aurora benjamin blanca catalina cesar claudia cristina cristobal elena elisa emilio ernesto esteban estela eugenia federico felipe fidel gerardo gilberto guillermo gustavo hernan horacio humberto ines irene isidro jacinto jaime julio leonardo leticia lorena lourdes macarena magdalena marcos margarita mariano marina martin mauricio maximiliano milagros miriam monica nicolas norma octavio olga patricio pilar ramiro reinaldo renata rocio rodolfo rogelio rosa salvador samuel sandra silvia socorro sonia susana teresa tomas valeria vicente victor virginia yesenia",
+  portuguese: "adriano alessandra aline amanda andre antonia barbara bernardo caetano camila catarina claudio cristiano daniela debora denise edson eduarda elaine enzo everton fabiana felipe flavia francisca gabriel gilberto helena heloisa igor iolanda jaqueline jefferson joaquina jorge julio karina leticia livia lorena luciana lucas luiz marcela marcia mateus mauricio miguel milena natalia nelson otavio patricia rafaela raquel renan rita roberto rosana samuel sebastiao silvana simone sonia tatiana thalita valeria vinicius vitoria washington",
+  north_indian: "aakash aarti abhay abhishek aditi akhil akshay alok amar amitabh amrita anand anjana ankur anu anupam anurag aparna archana arpita aruna ashish ashwin asha avinash ayush bhavya chandan chetan darshan deepa deepika dev devendra dhruv dilip disha gagan ganga gauri girish gopal hari harish hemant indira ishita jaya jitendra jyoti kajal kamal kamini kapil karan kartik kaveri keshav kishore komal krishan kunal lalit lata madhu mahendra manish manisha mansi meera mohan mohini monika naina namrata naveen nidhi nitin om pallavi pankaj parul pawan payal piyush pradeep pramod pranav prashant preeti puja rachna radha raghav rajeev rajiv rakhi ram ramesh rashmi ratan reena renu richa rishi ritika rupa sachin sadhana sagar sakshi sandeep sangeeta sanjeev santosh sapna sarita satish savita shalini shankar shanti sharad shashi shikha shilpa shivani shobha shruti shyam smita sneha sonal subhash sudha sudhir suman sumit surbhi suraj surendra sushil tanvi tarun uma umesh usha vandana varsha vidya vineet vinay vipin vishal yamini yash yogesh",
+  gujarati: "aarav alpa amisha amrish bharat bhavin bhumi chandni darshana devang dharmesh dhruv dimple ekta falguni gaurang harsha harshad heena himanshu jagruti jalpa janak jayshree jigna ketan kinjal kirit komal mayur meghna minal mukund nayan nehal nimesh nirav pankaj parul pinal pragna prakash pritesh purvi rajen rajni rakesh rekha rina rupal sanjay shailesh sejal shital sunil tejal urvashi vimal viral yogini",
+  south_indian: "aishwarya ananth anbu archana arumugam ashok bala bhaskar chandra deepak devi dhanush durga ganesh geetha gokul gopal hari indu jagan jaya jayanthi kalaiselvi kamala kannan karthika kiran krishna lakshman lavanya madhavan mahalakshmi malathi manikandan mohan muthu nagaraj nalini narayan padmini prabhakar prasad praveen radha raja rajesh rajini ramya ranjani ravi revathy rohini sangeetha sankar saranya sarita selvi shankar shanthi shiva sita sivakumar sridevi srikanth subramani sujatha sunitha surya swathi thilak uma usha vasanth vasudha vel vidya vijay vimala yamuna",
+  sa_muslim: "aamir abid adil afzal akbar akram altaf amjad arshad asad ashraf azhar danish ehsan fahad farhan ghulam habib haroon idris ijaz ilyas imtiaz irshad ishaq jalal javed kamran khurram mansoor moin mubarak muneer mushtaq nasir naeem nawaz owais qasim rafiq rehan saad sadiq safdar salman sarfaraz shabbir shafiq shakeel shams shehzad sohail talha tanveer tauseef umair wajid yasir zafar zaheer zubair zakir ayaan aariz rayyan zayn zain aliya alia amna anam areeba asma atiya bilqis dua eman farida fariha fozia ghazala hajra hina humaira iman jameela kulsum lubna maha maliha mehreen munira nafisa najma nasreen rehana rida saba sabeen sadaf saira sameera sanober shabnam shagufta sidra sumaya tabassum warda yusra zakia zareen zeba zehra nabiha nabila nadia naila nida nimra noreen rukhsana ruqayya safiya sabiha samina shabana shaheen shaista sumaira tahira tasneem zara zubaida",
+  arab: "abdelaziz abdelkader adel ahlam amal amira asma aya bashar dalia fadwa farid ghada hadi haifa hamza hanan hatem hussam ibtisam ihab imad iman issam jalal jamila karam khaled lamia lubna maher manal marwa mazen mohannad mona muna nadia nahla najib nawal nizar omar rabab radwan raed rafiq rasha rima riyad saad sabah sahar salim samar samira sawsan shadi sherif suha tamer tarek wael wafa yara yasser zaid zaki zeina zuhair",
+  persian: "afsaneh ali akbar amir ashkan azita behnaz bahar bahram dariush ehsan elham farzaneh farnaz fatemeh ghazal golnaz hamed hamid hasti homa kamran kaveh keyvan mahnaz mahmoud majid mandana mansour marjan maryam masoud mitra mohammad nader nazanin negar parisa payam pegah peyman pouya ramin reza sanaz sara sepideh shahin shahla shiva siavash soheil taraneh vahid yalda zahra",
+  turkish: "ali alp arda asli aylin aysel barış baris berk berna beste bulent can caner cansu deniz dilek ece efe ekin emel enes erdem eren ezgi fatih ferhat gizem gulsen hakan halil ilker irem kaan kerem levent melike mert meltem nalan nazli nesrin nur oguz orhan ozan pinar sedat selin sema serdar sibel sinan suleyman tugba tuncay ugur umut volkan yagmur yasin yigit yusuf zafer",
+  chinese: "ah an bin bing chao chun cong dan di dong fei gang guang hai han hua huan jia jiao jin kai kun lei li lian lin long mei meng min na peng qi qian qin qing rong rui shan sheng shu shuang si song ting wen wu xia xian xiang xiao xue ya yang yao yun ze zhen zheng zhong zhu",
+  japanese: "aiko asuka ayaka chie chihiro daiki eiji fumiko goro hana haruki hideki hikari hiromi hitomi isamu jun kaito kana kazuo kei ken kiyoshi kumiko masako masaru mayumi michio minoru miyu momoko nanami natsuki nobu osamu rei rina ryota saki sayaka shigeru shinji sho sumiko tadashi takashi tetsuya tomohiro toshi tsubasa yasuko yoshiko yosuke yuji yukiko yuma yusuke",
+  korean: "bora chanyeol daehyun eunbi eunhye eunjung gayoung hana hoseok hyejin hyuna jaewon jieun jimin jinwoo jiyoung joohyun junho kyungsoo mina minho minseo nayeon seokjin seulgi seungho sohee sooah sungho sunhee taeyang wooyoung yeji yoona youngmi",
+  vietnamese: "chi cuong dat diem giang hien hoang hong huy kim lien loan mai nga nghia nguyet nhan nhi oanh quan quynh sang tam thang thien thinh thom toan trinh tu tuyet uyen van viet xuan yen",
+  filipino: "aileen bayani bienvenido boyet carmelita danilo dindo emmanuel erlinda ernesto evangeline felicidad florencio gloria imelda jojo jun junjun leonora lito lourdes manny marivic mylene noel nonoy perla rhodora rogelio romeo rosario teodoro virgilio zenaida",
+  yoruba: "abimbola abiodun adaeze adeola adesola adewale adunni ajoke akin akinola anuoluwapo ayomide bolaji bolanle bukunmi busayo dapo dele ebun enitan fisayo folasade gbemisola ibukun idowu ifeoluwa iyabo jumoke kayode kolawole lanre lola modupe morenike niyi olabisi oladele olamide olaniyi olufemi olusegun omolara opeyemi oyinda remi rotimi sade seyi shola sola titilayo tosin wunmi yemi",
+  igbo: "adanna amarachi chibuike chidinma chiemeka chika chimamanda chimezie chinyere chukwudi ebere echezona ekene ezinne ijeoma ikechukwu kamsi nkem nnenna nonso obiora ogechi okechukwu onyeka oluchi tobenna uju ugochi ugonna uzoma",
+  akan: "adjoa afia akwasi akwete ato baaba effie ekua fiifi kakra kwesi nana nhyira obaa yaw",
+  east_african: "abdi akello amina awino chebet faith grace jabali jelagat jepchumba kiprono kipruto makena mumbua mutua mwende nafula nekesa njoki nyokabi okello wairimu wambui wangari wanjala",
+  ethiopian: "abel alemitu aster ayana bereket biruk dagim ephrem fasil fitsum hana kalkidan lidya liya mahlet mikiyas natnael rediet ruth seble senait tadele tsedey woinshet yohannes zemen",
+  polish: "agata alicja bogdan czeslaw edyta emilia filip franciszek grzegorz hubert ireneusz jacek janusz jaroslaw kacper karolina konrad krystian leszek lucyna marek mariusz marta mieczyslaw milena oliwia patryk przemyslaw radoslaw renata robert roman sebastian szymon wanda wiktor wiktoria witold zuzanna",
+  russian: "albina alla anatoli arkady dina elizaveta fyodor gleb grigory inna kseniya larisa leonid lev margarita matvei nikita oksana pyotr roman ruslan semyon stanislav taisiya timur valery vasily veronika vitaly yaroslav yegor zhanna zinaida",
+};
+
+G_MORE.sahel = "mamadou moussa ousmane ibrahima amadou aminata fatoumata mariama aissatou boubacar cheikh abdoulaye seydou souleymane kadiatou awa oumar modibo adama alassane mamadi sekou salif oumou binta coumba ndeye astou khady babacar idrissa lamine moustapha";
+const MUSLIM_EXTRA = "mamadou moussa ousmane ibrahima amadou aminata fatoumata mariama aissatou boubacar cheikh abdoulaye seydou souleymane kadiatou oumar alassane sekou salif oumou babacar idrissa lamine moustapha nabiha nabila nadia naila nida nimra noreen rukhsana ruqayya safiya sabiha samina samira shabana shaheen shaista sumaira tahira tasneem zara zubaida zehra aliya alia amna anam areeba asma atiya bilqis dua eman farida fariha fozia ghazala hajra hina humaira iman jameela kulsum lubna maha maliha mehreen munira nafisa najma nasreen rehana rida saba sabeen sadaf saira sameera sanober shabnam shagufta sidra sumaya tabassum warda yusra zakia zareen zeba aaliyah aamir abid adil afzal akbar akram altaf amjad arshad asad ashraf azhar ehsan farhan fahad ghulam habib haroon idris ijaz ilyas imtiaz iqbal irshad ishaq jalal javed kamran khurram mansoor moin mubarak muneer mushtaq nasir naeem nawaz owais qasim rafiq rehan saad sadiq safdar salman sarfaraz shabbir shafiq shakeel shams shehzad sohail sultan talha tanveer tauseef umair wajid yasir yasser zafar zaheer zubair zakir ayaan aariz rayyan zayn zain amira asma aya ahlam bashar hamza hanan hatem ibtisam ihab imad issam jamila khaled lamia marwa mazen mohannad mona muna nahla najib nawal nizar rasha samar sawsan suha tarek wael yara zaid zeina fatemeh zahra masoud";
+
+/* Pan-Muslim given names: spread lightly across many origins; the surname decides */
+const MUSLIM_SPREAD = "muhammad mohammed mohamed mohammad muhammed ahmed ahmad ali omar umar khalid hassan hasan hussein husain ibrahim yusuf youssef yousef mustafa mostafa abdullah karim kareem faisal jamal fatima aisha aicha khadija zainab maryam mariam noor nur ismail salma amina rashid saeed said anwar yasmin yasmine leila laila adnan amir abdul abbas hamid sami " + MUSLIM_EXTRA;
+const SPREAD_TO = { arab: .55, sa_muslim: .55, bangladeshi: .25, persian: .25, turkish: .2, somali: .25, afghan: .2, hausa: .2, indonesian: .2, gujarati_muslim: .3, sindhi: .15 };
+
+/* Religion hints from given names: [label, strength, names] */
+const RH = [
+  [ISL, .85, MUSLIM_SPREAD + " mehmet mehmed ahmet omer huseyin fatma ayse hatice zeynep emine merve esra busra imran irfan bilal hamza usman osman zahra aminu rizwan asif arif shahid junaid waqar tahir nadeem zeeshan kashif sajid zahid fawad shoaib wasim waseem sana hira bushra rabia saima nazia shazia uzma sadia iqra emir edin mirza haris almir kenan senad elvir amra amila lejla emina enes dzenan hauwa hadiza habiba halima rafiqul shafiqul aminul mizanur habibur mahbub nusrat taslima farzana abubakar yakubu bashir hafsa hodan farhiya ifrah halimo maxamed xasan cabdi caasha faadumo abdirahim abdikadir abdiaziz abdirahman abdulrahman abdelrahman walid nabil ziad bassam huda rania hiba ilhan mirwais nasrullah zalmay malalai"],
+  [HIN, .65, G.north_indian + " " + G.gujarati + " " + G.marathi + " " + G.bengali_hindu + " venkatesh srinivas murali balaji karthik aravind arvind senthil saravanan murugan meenakshi padma revathi kavitha lalitha gayathri anitha nandini sowmya sriram venkat raghav"],
+  [SIK, .75, "gurpreet harpreet manpreet jaspreet simranjit sukhwinder jaswinder baljinder kulwinder harjinder gurdeep gurinder gurmeet harbhajan jagmeet jagdeep navdeep navjot paramjit satnam inderjit amrinder sukhbir tejinder balwinder"],
+  [SIK, .4, "ranjit simran"],
+  [JEW, .8, G.jewish],
+  [JEW, .55, G.sephardic],
+  [CATH, .7, "ante ivica josip stjepan tomislav kresimir mate"],
+  [CATH, .4, "guadalupe jesus concepcion dolores rosario consuelo"],
+  [ORTH, .7, "dragan nemanja milos dusan slobodan srdjan vuk predrag jovana milica dragana snezana"],
+  [EAST, .75, "charbel boutros butros maroun georges elie"],
+  [EAST, .35, "elias antoine"],
+  [ETHO, .5, "tewodros yohannes mulugeta kidist eyerusalem tsion betelhem"],
+  [BUD, .6, "tenzing pemba dawa lhakpa pasang"],
+];
+
+/* Religion hints from surnames */
+const SRH = {
+  jain: [JAIN, .8, "Jain is a community surname used mainly by followers of Jainism."],
+  kaur: [SIK, .85, "Kaur is the name given to Sikh women at initiation and birth."],
+  singh: [SIK, .4, "Singh is borne by all Sikh men, but also by many Hindu (especially Rajput) families."],
+  lama: [BUD, .75, "Lama is a Tibetan Buddhist title used as a surname by Himalayan Buddhist families."],
+  sherpa: [BUD, .8, "Sherpa families are Tibetan Buddhist."],
+  shakya: [BUD, .7, "Shakya is a Newar Buddhist family name."],
+  bajracharya: [BUD, .75, "Bajracharya marks Newar Buddhist priestly families."],
+  rizvi: [SHIA, .7, "Rizvi is typically a Shia Sayyid family name."], naqvi: [SHIA, .7, "Naqvi is typically a Shia Sayyid family name."],
+  zaidi: [SHIA, .6, "Zaidi is often a Shia Sayyid family name."], jafri: [SHIA, .6, "Jafri is often a Shia Sayyid family name."], kazmi: [SHIA, .6, "Kazmi is often a Shia Sayyid family name."],
+  wadia: [ZORO, .75, "Wadia is a prominent Parsi (Zoroastrian) family name."], tata: [ZORO, .7, "Tata is a well-known Parsi (Zoroastrian) family name."],
+  contractor: [ZORO, .6, "Occupational English surnames like Contractor are characteristic of Parsi families."], engineer: [ZORO, .6, "Occupational English surnames like Engineer are characteristic of Parsi families."],
+  daruwala: [ZORO, .65, "-wala occupational names like Daruwala are typical of Parsi families."], batliwala: [ZORO, .65, "-wala occupational names like Batliwala are typical of Parsi families."],
+  godrej: [ZORO, .7, "Godrej is a prominent Parsi family name."], irani: [ZORO, .5, "Irani is used by Zoroastrian families who migrated from Iran to India."], bharucha: [ZORO, .6, "Bharucha is a Parsi family name."], dastur: [ZORO, .7, "Dastur means \"high priest\" in the Zoroastrian tradition."],
+  cohen: [JEW, .5, "Cohen (Kohen) marks the hereditary Jewish priestly lineage."], kohn: [JEW, .5, "Kohn is a variant of Cohen, the Jewish priestly lineage."], levy: [JEW, .4, "Levy marks descent from the Levites in Jewish tradition."], levi: [JEW, .4, "Levi marks descent from the Levites in Jewish tradition."],
+  khoury: [EAST, .55, "Khoury means \"priest\", a name very common among Lebanese Christians."], khouri: [EAST, .55, "Khouri means \"priest\", a name very common among Lebanese Christians."], boutros: [EAST, .6, "Boutros is the Arabic form of Peter, typically a Christian name."],
+};
+
+/* ---------- Spelling patterns (on normalized surname) ---------- */
+// [regex, {origin: weight}, label shown, explanation]
+const P = [
+  [/^(mc|mac)[a-z]{3,}/, { scottish: 2, irish: 1.6 }, "Mac-/Mc-", "Gaelic \"son of\", the classic Scottish and Irish patronymic prefix."],
+  [/(dottir)$/, { icelandic: 3 }, "-dóttir", "Icelandic matronymic or patronymic meaning \"daughter of\"."],
+  [/(dzki|dzka|ski|ska|cki|cka)$/, { polish: 2.5, ukrainian: .4, russian: .3, jewish: .4 }, "-ski / -cki", "Polish toponymic suffix meaning \"of\" or \"from a place\". It also appears in other Slavic and Ashkenazi Jewish names."],
+  [/(wicz|czyk|czak|szak|siak|niak)$/, { polish: 2.3, jewish: .3 }, "-wicz / -czyk", "Polish patronymic or diminutive ending."],
+  [/(enko|chuk|czuk|iuk|yuk)$/, { ukrainian: 2.5 }, "-enko / -chuk", "Ukrainian patronymic ending meaning \"son of\" or \"little\"."],
+  [/(ovich|evich|ovych|evych)$/, { russian: 1.2, ukrainian: .9, jewish: .8, south_slavic: .5 }, "-vich", "East Slavic patronymic suffix, also common in Belarusian and Jewish names."],
+  [/(skiy|skii|skaya|sky)$/, { russian: 1.8, ukrainian: 1, jewish: .6, polish: .5 }, "-sky", "Russian or Ukrainian form of the Slavic toponymic suffix."],
+  [/[^aeiou](ov|ev|ova|eva|yev|yov)$/, { russian: 2.2 }, "-ov / -ev", "East Slavic possessive suffix meaning \"of\" or \"belonging to\". It is also used in Bulgaria and across the former USSR."],
+  [/(ic|vic)$/, { south_slavic: 2.5, czech: .3 }, "-ić", "South Slavic suffix meaning \"little\" or \"son of\", shared by Serbs, Croats, Bosniaks and Montenegrins."],
+  [/(opoulos|opulos|poulos|akis|akos|idis|ides|iadis|atos|oglou|iou|antis|elis)$/, { greek: 2.6 }, "-poulos / -akis / -idis", "Greek surname suffix (\"son of\" or diminutive) that often signals region within Greece."],
+  [/[^aeiou](os|is|ou)$/, { greek: .7, baltic: .4, spanish: .3, portuguese: .2 }, "-os / -is", "Ending common in Greek surnames, though not unique to them."],
+  [/(escu|eanu)$/, { romanian: 2.8 }, "-escu / -eanu", "Distinctively Romanian suffix meaning \"belonging to\" or \"from\"."],
+  [/(yan|ian|yants|unts)$/, { armenian: 2.4, persian: .5 }, "-ian / -yan", "Armenian suffix meaning \"son of\" or \"of the family of\"."],
+  [/(shvili|dze)$/, { georgian: 3 }, "-shvili / -dze", "Georgian suffixes meaning \"child of\" (east) and \"son of\" (west)."],
+  [/(oglu)$/, { turkish: 2.6 }, "-oğlu", "Turkish suffix meaning \"son of\"."],
+  [/(demir|kaya|yildiz|celik|aslan|arslan|dogan|tepe|turk|soy|yurt)$/, { turkish: 1.7 }, "Turkish word compound", "Turkish surname built from a descriptive Turkish word, typical of names adopted under the 1934 Surname Law."],
+  [/^(oz)[a-z]{3,}/, { turkish: 1.3 }, "Öz-", "Turkish prefix meaning \"genuine\" or \"pure\", as in Özdemir and Öztürk."],
+  [/(sson)$/, { swedish: 2.2, icelandic: 1 }, "-sson", "Scandinavian patronymic meaning \"son of\"."],
+  [/[^s]son$/, { anglo: 1.2, swedish: .8, danonorwegian: .3 }, "-son", "Patronymic \"son of\" ending, common in English and Scandinavian names."],
+  [/(sen)$/, { danonorwegian: 2.2, dutch: .5, german: .4 }, "-sen", "Danish and Norwegian patronymic meaning \"son of\"."],
+  [/(qvist|quist|strom|lund|gren|holm|blad|stedt)$/, { swedish: 1.8, danonorwegian: .5 }, "-qvist / -ström / -gren", "Swedish nature-compound surname ending (twig, stream, grove)."],
+  [/(berg)$/, { swedish: .9, german: .8, jewish: .8 }, "-berg", "\"Mountain\". Used in Swedish, German and Ashkenazi Jewish surnames."],
+  [/(nen)$/, { finnish: 2.7 }, "-nen", "Finnish diminutive or place suffix, the most recognizable Finnish surname ending."],
+  [/[^aeiou](ez|az|iz|oz)$/, { spanish: 2, portuguese: .3, filipino: .4 }, "-ez", "Spanish patronymic ending meaning \"son of\", as in Hernández from Hernando."],
+  [/(eira|eiro|inho|inha|oes|aes|elho|enca)$/, { portuguese: 2.3 }, "-eira / -inho", "Distinctively Portuguese ending."],
+  [/(ini|ino|elli|ello|etti|etto|acci|ucci|azzi|ozzi|uzzi|eschi|asso|one|oni|ano|ato|ari|ieri|esi)$/, { italian: 2 }, "-ini / -etti / -ano", "Italian suffix: a diminutive, augmentative or plural family form."],
+  [/[^aeioukc][io]$/, { italian: .3, spanish: .1 }, "-i / -o", "Vowel ending typical of Italian surnames."],
+  [/(mann|meier|meyer|maier|bauer|huber|hofer|inger|ler|bach|dorf|burg|hardt|haus|brecht)$/, { german: 1.8, jewish: .3 }, "German ending", "Common German surname element (-mann, -bach, -dorf, -er)."],
+  [/(stein|baum|blum|feld|thal|witz|vitz|sohn|blatt|zweig)$/, { jewish: 1.7, german: .9 }, "-stein / -baum / -witz", "German or Yiddish element often found in Ashkenazi Jewish surnames."],
+  [/(stra|sma|inga|enga)$/, { dutch: 1.9 }, "-stra / -sma", "Frisian (northern Dutch) surname ending."],
+  [/(eau|eaux|ault|ois|oit|iere|eux)$/, { french: 2 }, "-eau / -ault / -ois", "Distinctively French spelling."],
+  [/(ier|elle|et|ot)$/, { french: .8 }, "-ier / -et", "Ending common in French surnames."],
+  [/(cek|ček|sek|chal)$/, { czech: 1.5 }, "-ček", "Czech diminutive ending."],
+  [/(auskas|iauskas|evicius|avicius|aitis|aite|iene|enas|unas|onis|ins)$/, { baltic: 2.5 }, "-auskas / -ius / -iņš", "Baltic (Lithuanian or Latvian) masculine or feminine surname ending."],
+  [/[^aeiou]aj$/, { albanian: 2.2 }, "-aj", "Northern Albanian clan-style surname ending."],
+  [/(ullah|uddin)$/, { sa_muslim: 2.2, bangladeshi: 1.2 }, "-ullah / -uddin", "Arabic theophoric element (\"of God\", \"of the faith\") common in South Asian Muslim names."],
+  [/(zadeh|zada|pour|nejad|nezhad|vand)$/, { persian: 2.6 }, "-zadeh / -pour / -nejad", "Persian suffix meaning \"born of\", \"son of\" or \"lineage\"."],
+  [/(zai|zay|khel)$/, { afghan: 2.6 }, "-zai / -khel", "Pashtun tribal suffix meaning \"descendant of\" or \"clan\"."],
+  [/(anan|aran|esan|asan|eswaran|varan|vanan)$/, { south_indian: 1.8 }, "-anan / -esan", "Tamil name ending (as in Saravanan, Ganesan), often from a father's given name."],
+  [/[^aeiou](ia|iya)$/, { gujarati: 1.5, gujarati_muslim: .5, punjabi: .5, georgian: .3, italian: .2 }, "-ia / -iya", "Common Gujarati surname ending, often from a place or trade (Kapadia, \"cloth merchant\"). It also appears in Punjabi names like Bhatia and Majithia."],
+  [/[^aeiou]ani$/, { sindhi: 1.6, gujarati_muslim: .9, persian: .4 }, "-ani", "Sindhi and Khoja ending meaning \"descendant of\" (Advani, Lakhani). It is also used in Persian names."],
+  [/(ineni|ipati|apati|palli|alla|ella|uri|gari)$/, { south_indian: 1.4 }, "-ineni / -palli", "Telugu family-name ending, often from an ancestral village."],
+  [/(wala|walla|vala)$/, { gujarati: 1.4, gujarati_muslim: 1.2 }, "-wala", "Indian occupational suffix (\"one who deals in\"), common among Gujarati and Parsi families."],
+  [/(kar)$/, { marathi: 1.6 }, "-kar", "Marathi suffix meaning \"from [village]\", as in Tendulkar."],
+  [/(swamy|swami|murthy|murty|appa|ayya|esan|athan|nathan|krishnan|raman|arajan|alingam|sekar|reddy|naidu|pillai)$/, { south_indian: 2.3 }, "-swamy / -nathan / -murthy", "South Indian (Tamil, Telugu or Kannada) name element."],
+  [/(singhe|singha|nayake|wardena|wardene|ratne|sekara|sekera|suriya)$/, { sinhalese: 2.7 }, "-singhe / -nayake", "Distinctively Sinhalese (Sri Lankan) surname element."],
+  [/(chai|porn|pong|phong|sakul|kul|siri|wong|sawat|thong|rat|chit)$/, { thai: 1.8 }, "Thai compound", "Pali or Sanskrit element used in long, unique Thai surnames.", 7],
+  [/(anto|yanto|wati|iyah|ianto|ono)$/, { indonesian: 1.4 }, "-anto / -wati", "Javanese name ending.", 5],
+  [/^(ade|olu|oluwa|ola|ayo|ogun|oye|afo|aki)/, { yoruba: 2.2 }, "Ade- / Olu- / Ola-", "Yoruba name prefix (crown, God, wealth, joy)."],
+  [/^(nwa|chukwu|onye|uche)|(chukwu|nna|ezeh)$/, { igbo: 2.2 }, "Chukwu- / Nwa-", "Igbo name element (God, child)."],
+  [/^(kip|chep|jep)[a-z]{3,}/, { east_african: 2.3 }, "Kip- / Chep-", "Kalenjin (Kenyan) prefix for men and women."],
+  [/^(gebre|gebra|wolde|welde|tekle|haile|tesfa|berhe|habte)/, { ethiopian: 2.6 }, "Gebre- / Wolde- / Haile-", "Ethiopian or Eritrean theophoric prefix (\"servant of\", \"son of\", \"power of\")."],
+  [/^(abdi)[a-z]{2,}/, { somali: 2.2 }, "Abdi-", "Somali form of the Arabic Abd (\"servant of\")."],
+  [/^(abdul|abdel|abdal)/, { arab: 1.5, sa_muslim: 1.2 }, "Abdul-", "Arabic \"servant of [God]\", a Muslim naming element."],
+  [/^(dima|maca|maga|manga|panga|pana)[a-z]{3,}/, { filipino: 1.4 }, "Tagalog prefix", "Native Tagalog name prefix."],
+];
+
+/* Given-name patterns */
+const GP = [
+  [/(preet|jeet|jit|inder|winder)$/, { punjabi: 2 }, "-preet / -jit / -inder", "Punjabi given-name element, very common among Sikhs.", { r: [SIK, .55] }],
+  [/^(zh|x|q)[aeiou]/, { chinese: 1.6 }, "zh- / x- / q-", "Pinyin spelling that occurs almost only in romanized Mandarin Chinese."],
+  [/^(gebre|wolde|haile|tekle|tesfa)/, { ethiopian: 2 }, "Gebre- / Haile-", "Ethiopian or Eritrean Christian theophoric given name.", { r: [ETHO, .55] }],
+  [/^(abdul|abdel|abdi|abd)/, { arab: .6, sa_muslim: .6, somali: .4 }, "Abd-", "Arabic \"servant of [God]\", a Muslim naming element.", { r: [ISL, .8] }],
+  [/^(ade|olu|oluwa|ola|ayo|fol|tem|tolu)/, { yoruba: 1.5 }, "Ade- / Olu-", "Yoruba given-name prefix."],
+  [/^(chi|chuk|nn|ngo|uche|ife|obi)/, { igbo: .8 }, "Chi- / Ngo-", "Common opening of Igbo given names."],
+  [/^(kw|ko)[a-z]{2,}/, { akan: .6 }, "Kw-", "Akan day-name pattern."],
+];
+
+/* Particles that begin multi-word surnames */
+const PARTICLES = {
+  van: [{ dutch: 2, afrikaner: 1, german: .2 }, "Dutch \"from\""], vander: [{ dutch: 2, afrikaner: 1 }, "Dutch \"from the\""],
+  von: [{ german: 2.4 }, "German \"from\", sometimes a mark of nobility"], zu: [{ german: 1.5 }, "German \"at\""],
+  de: [{ french: 1, spanish: .8, portuguese: .8, dutch: .6, italian: .4 }, "\"of\" or \"from\" in French, Spanish, Portuguese or Dutch"],
+  du: [{ french: 1.8, afrikaner: .8 }, "French \"of the\""], le: [{ french: 1.8 }, "French \"the\""], la: [{ french: .8, spanish: .6, italian: .5 }, "Romance \"the\""],
+  del: [{ spanish: 1.5, italian: .8 }, "Spanish or Italian \"of the\""], della: [{ italian: 2 }, "Italian \"of the\""], di: [{ italian: 2 }, "Italian \"of\""],
+  da: [{ portuguese: 1.5, italian: 1 }, "Portuguese or Italian \"from\""], dos: [{ portuguese: 2 }, "Portuguese \"of the\""], das: [{ portuguese: 1.8 }, "Portuguese \"of the\""],
+  dela: [{ filipino: 2, spanish: .5 }, "Filipino \"of the\""], delos: [{ filipino: 1.8, spanish: .5 }, "Filipino/Spanish \"of the\""],
+  y: [{ spanish: 1.2 }, "Spanish \"and\", joining paternal and maternal surnames"],
+  al: [{ arab: 2.2 }, "Arabic article \"the\""], el: [{ arab: 1.8 }, "Arabic article \"the\" (Egyptian or Levantine spelling)"], abu: [{ arab: 2 }, "Arabic \"father of\""],
+  bin: [{ indonesian: 1.2, arab: 1.2 }, "Arabic or Malay \"son of\""], binti: [{ indonesian: 2 }, "Malay \"daughter of\""],
+  ben: [{ sephardic: 1.5, arab: .6 }, "Hebrew or Arabic \"son of\""], bat: [{ sephardic: 1.5 }, "Hebrew \"daughter of\""],
+  ter: [{ dutch: 2 }, "Dutch \"at the\""], ten: [{ dutch: 2 }, "Dutch \"at the\""], st: [{ anglo: 1, french: .5 }, "\"Saint\""],
+  mac: [{ scottish: 2, irish: 1.5 }, "Gaelic \"son of\""],
+};
+
+/* Diacritics on the raw input */
+const DIA = [
+  [/ł/i, { polish: 1.6 }, "ł", "The letter ł occurs mainly in Polish."],
+  [/[ąęńśźż]/i, { polish: 1.2 }, "ą ę ś ż", "Polish diacritics."],
+  [/đ/i, { south_slavic: 1.5 }, "đ", "The letter đ is used in Serbo-Croatian Latin script and in Vietnamese."],
+  [/ć/i, { south_slavic: .9, polish: .7 }, "ć", "The letter ć is used in Serbo-Croatian and Polish."],
+  [/[řěů]/i, { czech: 2 }, "ř ě ů", "Letters unique to Czech."],
+  [/[őű]/i, { hungarian: 2.2 }, "ő ű", "Double-acute vowels unique to Hungarian."],
+  [/[șțăȘȚ]/i, { romanian: 1.8 }, "ș ț ă", "Romanian comma-below letters."],
+  [/[şğıİ]/i, { turkish: 1.8 }, "ş ğ ı", "Turkish letters."],
+  [/ñ/i, { spanish: 1.3, filipino: .3 }, "ñ", "The Spanish eñe."],
+  [/[ãõ]/i, { portuguese: 1.5 }, "ã õ", "Portuguese nasal vowels."],
+  [/[øæ]/i, { danonorwegian: 1.8 }, "ø æ", "Danish and Norwegian letters."],
+  [/å/i, { swedish: .9, danonorwegian: .9 }, "å", "Scandinavian letter."],
+  [/ß/i, { german: 2 }, "ß", "The German eszett."],
+  [/[äöü]/i, { german: .8, swedish: .3, finnish: .3, turkish: .3, hungarian: .2 }, "ä ö ü", "Umlauted vowels (German, Scandinavian, Finnish, Turkish, Hungarian)."],
+  [/[ðþ]/i, { icelandic: 2.6 }, "ð þ", "Icelandic letters."],
+  [/[ėųįū]/i, { baltic: 2 }, "ė ų į", "Lithuanian letters."],
+  [/[ņļķģ]/i, { baltic: 2 }, "ņ ļ ķ", "Latvian letters."],
+  [/[čšž]/i, { czech: .5, south_slavic: .5, baltic: .5 }, "č š ž", "Háček letters used in Czech, Slovak, Serbo-Croatian, Slovene and Baltic languages."],
+  [/[ơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i, { vietnamese: 3 }, "Vietnamese tone marks", "Stacked tone marks are unique to Vietnamese."],
+  [/[èêë]/i, { french: .7 }, "è ê ë", "Accents common in French."],
+];
+
+/* Compatible origin families, used to detect mixed signals */
+const FAMILY = {};
+[["anglo", "irish", "scottish", "welsh"], ["spanish", "portuguese", "filipino"], ["north_indian", "gujarati", "marathi", "punjabi", "bengali_hindu", "south_indian", "malayali_christian", "nepali", "sinhalese", "sa_muslim", "bangladeshi", "gujarati_muslim", "sindhi"],
+ ["arab", "levant_christian", "persian", "turkish", "afghan", "somali", "sa_muslim", "bangladeshi", "hausa", "indonesian", "gujarati_muslim", "sindhi"], ["russian", "ukrainian", "polish", "czech", "baltic", "south_slavic"],
+ ["swedish", "danonorwegian", "finnish", "icelandic"], ["german", "dutch", "afrikaner", "jewish"], ["jewish", "sephardic"], ["chinese", "korean", "japanese", "vietnamese"],
+ ["yoruba", "igbo", "hausa", "akan", "sahel"]].forEach((grp, i) => grp.forEach(o => (FAMILY[o] = FAMILY[o] || new Set()).add(i)));
+const sameFamily = (a, b) => a === b || [...(FAMILY[a] || [])].some(g => (FAMILY[b] || new Set()).has(g));
+
+/* ---------- Index building ---------- */
+for (const [o, l] of Object.entries(S_MORE)) S[o] = (S[o] || "") + " " + l;
+for (const [o, l] of Object.entries(G_MORE)) G[o] = (G[o] || "") + " " + l;
+const clean = w => w.replace(/\(.*?\)/g, "");
+function index(src) {
+  const m = new Map();
+  for (const [o, list] of Object.entries(src)) for (const w of clean(list).split(/\s+/)) if (w) { if (!m.has(w)) m.set(w, new Set()); m.get(w).add(o); }
+  return m;
+}
+const SI = index(S), GI = index(G);
+
+/* Sound-alike matching for names not in the lists: trigram overlap plus a shared ending */
+const grams = w => { const s = "^" + w + "$", g = new Set(); for (let i = 0; i < s.length - 2; i++) g.add(s.slice(i, i + 3)); return g; };
+const GRAMS = new Map();
+for (const w of [...SI.keys(), ...GI.keys()]) if (!GRAMS.has(w)) GRAMS.set(w, grams(w));
+function neighbors(k, idx) {
+  const g = grams(k), out = [];
+  for (const w of idx.keys()) {
+    if (w === k || w.length < 3) continue;
+    const h = GRAMS.get(w); let inter = 0;
+    for (const x of g) if (h.has(x)) inter++;
+    const dice = 2 * inter / (g.size + h.size);
+    let L = 0; while (L < k.length && L < w.length && k[k.length - 1 - L] === w[w.length - 1 - L]) L++;
+    const sim = .55 * dice + .45 * Math.min(L, 5) / 5;
+    if (sim >= .42 && dice >= .2 && L >= 2) out.push({ w, sim, L, origins: idx.get(w) });
+  }
+  return out.sort((a, b) => b.sim - a.sim).slice(0, 8);
+}
+function fuzzyVote(k, idx, weight) {
+  const nb = neighbors(k, idx); if (!nb.length) return null;
+  const v = {}; let tot = 0;
+  for (const n of nb) for (const o of n.origins) { const x = n.sim * n.sim / n.origins.size; v[o] = (v[o] || 0) + x; tot += x; }
+  const strength = Math.min(1, nb[0].sim / .6);
+  const obj = {}; for (const [o, x] of Object.entries(v)) if (x / tot >= .08) obj[o] = weight * strength * x / tot;
+  return { obj, nb };
+}
+const SPREAD = new Set(MUSLIM_SPREAD.split(/\s+/));
+const RHI = new Map();
+for (const [label, s, list] of RH) for (const w of list.split(/\s+/)) if (w && (!RHI.has(w) || RHI.get(w)[1] < s)) RHI.set(w, [label, s]);
+
+const norm = s => s.replace(/ß/g, "ss").replace(/[łŁ]/g, "l").replace(/[øØ]/g, "o").replace(/[æÆ]/g, "ae").replace(/[đĐ]/g, "d")
+  .replace(/ı/g, "i").replace(/[ðÐ]/g, "d").replace(/[þÞ]/g, "th").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const key = s => norm(s).replace(/[^a-z]/g, "");
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+/* ---------- Analysis ---------- */
+function analyze(raw) {
+  const tokens = raw.trim().replace(/\s+/g, " ").split(" ").filter(Boolean);
+  if (tokens.length < 2) return { error: "Enter both a first and a last name, for example \"Maria Rossi\"." };
+
+  let given = tokens[0], middle = [], surname;
+  const notes = [];
+  // Family-name-first order (Chinese, Korean, Vietnamese)
+  const firstK = key(tokens[0]), lastK = key(tokens[tokens.length - 1]);
+  const eastAsian = o => ["chinese", "korean", "vietnamese"].includes(o);
+  if (SI.has(firstK) && [...SI.get(firstK)].some(eastAsian) && !SI.has(lastK) && (GI.has(lastK) || lastK.length <= 4 || tokens.length > 2)) {
+    given = tokens[tokens.length - 1]; middle = tokens.slice(1, -1); surname = [tokens[0]];
+    notes.push("This looks like family-name-first order, as used in Chinese, Korean and Vietnamese, so the first word was read as the surname.");
+  } else {
+    let pIdx = -1;
+    for (let i = 1; i < tokens.length - 1; i++) if (PARTICLES[key(tokens[i])] !== undefined) { pIdx = i; break; }
+    if (pIdx > 0) { surname = tokens.slice(pIdx); middle = tokens.slice(1, pIdx); }
+    else { surname = [tokens[tokens.length - 1]]; middle = tokens.slice(1, -1); }
+  }
+
+  const scores = {}, sScores = {}, gScores = {}, signals = [], relHints = [];
+  const add = (bucket, obj, mult, part, label, note, hl) => {
+    let total = 0;
+    for (const [o, w] of Object.entries(obj)) { scores[o] = (scores[o] || 0) + w * mult; bucket[o] = (bucket[o] || 0) + w * mult; total += w * mult; }
+    signals.push({ part, label, note, w: total, hl });
+  };
+
+  /* Surname */
+  const parts = surname.flatMap(t => t.split("-")).map(t => ({ raw: t, k: key(t) })).filter(p => p.k);
+  const particleParts = parts.filter((p, i) => i < parts.length - 1 && PARTICLES[p.k]);
+  const coreParts = parts.filter(p => !particleParts.includes(p));
+  const surnameDisplay = surname.join(" ");
+  const fullK = parts.map(p => p.k).join(""), coreK = coreParts.map(p => p.k).join("");
+
+  if (/^o['’]/i.test(surname[0])) add(sScores, { irish: 3 }, 1, "surname", "O'", "Irish Ó means \"descendant of\", one of the clearest markers of Gaelic Irish origin.", { word: surnameDisplay, sub: surname[0].slice(0, 2) });
+  for (const p of particleParts) add(sScores, PARTICLES[p.k][0], 1, "surname", p.raw, `The particle "${p.raw}" is ${PARTICLES[p.k][1]}.`, { word: surnameDisplay, sub: p.raw });
+
+  let exact = null;
+  for (const k of [fullK, coreK]) if (SI.has(k)) { exact = { k, origins: SI.get(k) }; break; }
+  const exactHits = [];
+  if (exact) exactHits.push(exact);
+  else for (const p of coreParts) if (SI.has(p.k)) exactHits.push({ k: p.k, origins: SI.get(p.k), raw: p.raw });
+
+  for (const h of exactHits) {
+    const n = h.origins.size, obj = {};
+    for (const o of h.origins) obj[o] = 3.2 / Math.sqrt(n);
+    const labels = [...h.origins].map(o => O[o].eth);
+    const note = n === 1 ? `"${h.raw || surnameDisplay}" is a well-documented ${labels[0]} surname.`
+      : `"${h.raw || surnameDisplay}" is a documented surname in several traditions: ${labels.join(", ")}.`;
+    add(sScores, obj, 1, "surname", h.raw || surnameDisplay, note, null);
+  }
+  if (!exactHits.length) {
+    const target = coreParts.length ? coreParts[coreParts.length - 1].k : fullK;
+    for (const [re, obj, label, note, minLen] of P) {
+      if (minLen && target.length < minLen) continue;
+      const m = target.match(re);
+      if (m) add(sScores, obj, 1, "surname", label, note, { word: surnameDisplay, sub: m.slice(1).find(Boolean) || m[0] });
+    }
+    // Japanese phonotactics
+    if (/^(?:(?:[kgsztdnhbpmr]y?|sh|ch|ts|f|j|w|y)?[aiueo]|n(?![aiueoy]))+$/.test(target) && target.length >= 5 &&
+        /(moto|mura|yama|kawa|gawa|hara|bara|shita|saki|zaki|naka|tani|uchi|guchi|hashi|bayashi|oka|shima|jima|zawa|sawa|ta|da|no|ki)$/.test(target)) {
+      const strong = /(moto|mura|yama|kawa|gawa|hara|bara|shita|saki|zaki|naka|tani|uchi|guchi|hashi|bayashi|shima|jima|zawa|sawa)$/.test(target);
+      add(sScores, { japanese: strong ? 2.2 : 1 }, 1, "surname", "Japanese syllables", "The surname is built entirely from Japanese syllables and ends in a common landscape element (mountain, river, field, base).", null);
+    }
+  }
+  const coreKey = coreParts.length ? coreParts[coreParts.length - 1].k : fullK;
+  let fuzzyOnly = false;
+  if (!exactHits.length && coreKey.length >= 3) {
+    const patternHit = signals.some(s => s.part === "surname" && s.label !== "O'" && !particleParts.some(p => p.raw === s.label));
+    const fv = fuzzyVote(coreKey, SI, patternHit ? 1.2 : 1.5);
+    if (fv) {
+      fuzzyOnly = !patternHit;
+      const ex = fv.nb.slice(0, 4).map(n => cap(n.w));
+      const labs = [...new Set(Object.entries(fv.obj).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([o]) => O[o].eth))];
+      const L = fv.nb[0].L;
+      add(sScores, fv.obj, 1, "surname", "Sounds like", `"${surnameDisplay}" is not in the reference list, but its spelling is closest to known surnames such as ${list(ex)}, which are mostly ${list(labs)}.`,
+        L >= 3 ? { word: surnameDisplay, sub: coreKey.slice(-Math.min(L, 5)) } : null);
+    }
+  }
+  if (SRH[coreKey]) relHints.push({ label: SRH[coreKey][0], s: SRH[coreKey][1], note: SRH[coreKey][2] });
+
+  let givenSpread = false;
+  /* Given + middle names */
+  const givenList = [{ raw: given, mult: 1, role: "given" }, ...middle.map(m => ({ raw: m, mult: .6, role: "middle" }))];
+  for (const g of givenList) {
+    const k = key(g.raw); if (!k) continue;
+    const roleWord = g.role === "given" ? "given name" : "middle name";
+    let matched = false;
+    if (GI.has(k) && !SPREAD.has(k)) {
+      matched = true;
+      const os = GI.get(k), obj = {};
+      for (const o of os) obj[o] = 1.6 / Math.sqrt(os.size);
+      const labs = [...os].map(o => O[o].eth);
+      add(gScores, obj, g.mult, g.role, g.raw, `The ${roleWord} "${g.raw}" is typical of ${labs.length === 1 ? labs[0] : labs.slice(0, -1).join(", ") + " and " + labs.slice(-1)} naming traditions.`, null);
+    }
+    if (SPREAD.has(k)) {
+      matched = true; if (g.role === "given") givenSpread = true;
+      add(gScores, SPREAD_TO, g.mult, g.role, g.raw, `The ${roleWord} "${g.raw}" is an Arabic-origin name used throughout the Muslim world, from Morocco to Indonesia.`, null);
+    }
+    if (!matched) {
+      for (const [re, obj, label, note, extra] of GP) {
+        const m = k.match(re);
+        if (m) { add(gScores, obj, g.mult, g.role, label, note, { word: g.raw, sub: m.slice(1).find(Boolean) || m[0] }); if (extra && extra.r) relHints.push({ label: extra.r[0], s: extra.r[1] * g.mult, note: `The ${roleWord} "${g.raw}" contains the ${label} element, which is common in ${ADJ[extra.r[0]]} families.` }); break; }
+      }
+    }
+    if (!matched && !RHI.has(k) && !signals.some(s => s.part === g.role && s.hl && s.hl.word === g.raw) && k.length >= 3) {
+      const fv = fuzzyVote(k, GI, 1);
+      if (fv) {
+        const ex = fv.nb.slice(0, 3).map(n => cap(n.w));
+        add(gScores, fv.obj, g.mult, g.role, "Sounds like", `The ${roleWord} "${g.raw}" is not in the reference list, but it resembles ${list(ex)}.`, null);
+        const relV = {};
+        for (const n of fv.nb.slice(0, 5)) if (RHI.has(n.w)) { const [l, s] = RHI.get(n.w); relV[l] = (relV[l] || 0) + s * n.sim; }
+        const best = Object.entries(relV).sort((a, b) => b[1] - a[1])[0];
+        if (best && best[1] >= .6) relHints.push({ label: best[0], s: Math.min(.45, best[1] / 3) * g.mult, note: `Names that sound like "${g.raw}" are often ${ADJ[best[0]]}.` });
+      }
+    }
+    if (RHI.has(k)) {
+      const [label, s] = RHI.get(k);
+      relHints.push({ label, s: s * g.mult, note: `The ${roleWord} "${g.raw}" is ${s >= .7 ? "strongly" : s >= .5 ? "commonly" : "sometimes"} associated with ${ADJ[label]} families.` });
+    }
+  }
+
+  /* Diacritics */
+  const seenDia = new Set();
+  for (const [re, obj, label, note] of DIA) {
+    if (re.test(raw) && !seenDia.has(label)) { seenDia.add(label); add(sScores, obj, 1, "spelling", label, note, null); }
+  }
+
+  const total = Object.values(scores).reduce((a, b) => a + b, 0);
+  const ranked = Object.entries(scores).filter(([, v]) => v > 0).map(([o, v]) => ({ o, p: v / total })).sort((a, b) => b.p - a.p);
+
+  /* Religion blend */
+  let rel = {};
+  for (const { o, p } of ranked) for (const [l, q] of Object.entries(O[o].rel)) rel[l] = (rel[l] || 0) + p * q;
+  // A Muslim given name says nothing about sect: spread that clue over the sect mix of the likeliest community
+  const strongest = relHints.reduce((m, h) => (!m || h.s > m.s ? h : m), null);
+  // Apply weakest first and strongest last, but generic "Muslim" clues before sect-specific ones
+  relHints.sort((a, b) => (a.label === ISL) - (b.label === ISL) || a.s - b.s).sort((a, b) => (b.label === ISL) - (a.label === ISL));
+  const refProf = ranked[0] && strongest && O[ranked[0].o].refine?.[strongest.label]?.[2];
+  const sectSrc = refProf ? O[refProf].rel : rel;
+  const sects = [ISL, SHIA, ALEV].map(l => [l, sectSrc[l] || 0]);
+  const sectTot = sects.reduce((a, b) => a + b[1], 0);
+  for (const h of relHints) {
+    const s = Math.min(.9, h.s);
+    for (const l of Object.keys(rel)) rel[l] *= (1 - s);
+    if (h.label === ISL && sectTot > 0) for (const [l, q] of sects) rel[l] = (rel[l] || 0) + s * q / sectTot;
+    else rel[h.label] = (rel[h.label] || 0) + s;
+  }
+  const rt = Object.values(rel).reduce((a, b) => a + b, 0) || 1;
+  const relRanked = Object.entries(rel).map(([l, v]) => ({ l, p: v / rt })).sort((a, b) => b.p - a.p);
+
+  const topOf = b => Object.entries(b).sort((x, y) => y[1] - x[1])[0]?.[0];
+
+  return { given, middle, surname: surnameDisplay, ranked, relRanked, relHints, signals, notes, sTop: topOf(sScores), gTop: topOf(gScores),
+           hasSurnameExact: exactHits.length > 0, fuzzyOnly, givenSpread, sCount: Object.keys(sScores).length, total };
+}
+
+/* ---------- Rendering ---------- */
+const confLabel = (p, strong) => p >= .6 && strong ? "high" : p >= .4 ? "moderate" : "low";
+const pct = p => Math.round(p * 100) + "%";
+function bars(items) {
+  return `<div class="bars">${items.map(i => `<div class="bar"><span class="lbl" title="${esc(i.l)}">${esc(i.l)}</span><span class="track"><span class="fill" style="width:${Math.max(2, i.p * 100).toFixed(1)}%"></span></span><span class="pct">${pct(i.p)}</span></div>`).join("")}</div>`;
+}
+function card(title, verdict, conf, barItems, paras, caveat) {
+  return `<article class="card"><h2>${title}</h2><div class="card-head"><p class="verdict">${esc(verdict)}</p><span class="pill ${conf}">${conf} confidence</span></div>
+    ${bars(barItems)}<div class="commentary">${paras.filter(Boolean).map(p => `<p>${p}</p>`).join("")}<p class="caveat">${caveat}</p></div></article>`;
+}
+function highlight(word, sub) {
+  if (!sub) return esc(word);
+  const i = norm(word).lastIndexOf(norm(sub));
+  if (i < 0 || norm(word).length !== word.length) return esc(word);
+  return esc(word.slice(0, i)) + "<mark>" + esc(word.slice(i, i + sub.length)) + "</mark>" + esc(word.slice(i + sub.length));
+}
+const list = arr => arr.length <= 1 ? arr.join("") : arr.slice(0, -1).join(", ") + " and " + arr[arr.length - 1];
+
+function render(r) {
+  const anat = document.getElementById("anatomy"), cards = document.getElementById("cards");
+  const hlS = r.signals.find(s => s.part === "surname" && s.hl);
+  const hlG = r.signals.find(s => s.part === "given" && s.hl);
+  const partsHtml = [
+    `<div class="part"><span class="word">${highlight(r.given, hlG && hlG.hl.word === r.given ? hlG.hl.sub : null)}</span><span class="role">Given name</span></div>`,
+    ...r.middle.map(m => `<div class="part"><span class="word">${esc(m)}</span><span class="role">Middle</span></div>`),
+    `<div class="part"><span class="word">${highlight(r.surname, hlS ? hlS.hl.sub : null)}</span><span class="role">Surname</span></div>`,
+  ].join("");
+  const sigs = [...r.signals].sort((a, b) => b.w - a.w).slice(0, 6);
+  anat.innerHTML = `<h2>Name anatomy</h2><div class="parts">${partsHtml}</div>` +
+    (sigs.length ? `<ul class="signals">${sigs.map(s => `<li><code>${esc(s.label)}</code><span>${esc(s.note)}</span></li>`).join("")}</ul>`
+      : `<p class="note">No recognizable markers were found in this name.</p>`) +
+    r.notes.map(n => `<p class="note">${esc(n)}</p>`).join("");
+
+  if (!r.ranked.length) {
+    cards.innerHTML = `<article class="card"><h2>No clear signal</h2><p class="verdict">Not enough information</p><div class="commentary"><p>Culture Seeker couldn't match this name to any tradition in its reference set. The name may be rare, recently coined, transliterated in an unusual way, or from a tradition that is not covered yet, such as many Indigenous, Pacific, Central Asian and Central African naming systems.</p><p>Try another spelling, or the name in its original form with accents.</p></div></article>`;
+    return;
+  }
+
+  const [t1, t2, t3] = r.ranked, P1 = O[t1.o], P2 = t2 && O[t2.o];
+  const strong = r.hasSurnameExact || r.sCount > 0;
+  let conf = confLabel(t1.p, strong && r.signals.length >= 2);
+  if (r.fuzzyOnly && conf === "high") conf = "moderate";
+  if (r.signals.length === 1 && r.signals[0].label === "Sounds like") conf = "low";
+
+  // Refinement by religion (e.g. South Slavic → Bosniak/Croat/Serb)
+  const topRel = r.relRanked[0];
+  const hintLabel = r.relHints.length ? r.relHints[r.relHints.length - 1].label : null;
+  const refine = P1.refine && hintLabel && P1.refine[hintLabel];
+  const ethLabel = refine ? refine[0] : P1.eth, ctyLabel = refine ? refine[1] : P1.cty[0];
+  const NP = refine && refine[2] ? O[refine[2]] : P1; // profile whose notes best fit the refined reading
+
+  /* Ethnicity */
+  const sigSentences = [...r.signals].sort((a, b) => b.w - a.w).slice(0, 3).map(s => esc(s.note));
+  const mixed = !r.givenSpread && r.sTop && r.gTop && !sameFamily(r.sTop, r.gTop) && r.gTop !== r.sTop;
+  const ethParas = [
+    `<strong>What the name shows.</strong> ${sigSentences.join(" ")}`,
+    esc(NP.ethNote),
+    t2 && t2.p >= .18 && !sameFamily(t1.o, t2.o) ? `There is also a meaningful chance of <strong>${esc(P2.eth)}</strong> background (${pct(t2.p)}), because some of these markers are shared between traditions.` :
+      t2 && t2.p >= .18 ? `Closely related readings such as ${esc(P2.eth)} (${pct(t2.p)}) are also plausible, because these traditions share many names.` : "",
+    mixed ? `<strong>Mixed signals.</strong> The surname points toward ${esc(O[r.sTop].eth)}, while the given name points toward ${esc(O[r.gTop].eth)}. This pattern often comes from intermarriage, a surname gained through marriage, adoption, or parents choosing a name from another culture. Surnames usually follow one line of descent, so the other side of the family is invisible here.` : "",
+  ];
+  const ethBars = r.ranked.slice(0, 3).map(x => ({ l: O[x.o].eth, p: x.p }));
+  const ethVerdict = t2 && t2.p >= .3 && !sameFamily(t1.o, t2.o) ? `${ethLabel}, or ${P2.eth}` : ethLabel;
+
+  /* Country */
+  const ctyMap = {};
+  for (const x of r.ranked) { const c = (P1.refine && O[x.o] === P1 && refine) ? refine[1] : O[x.o].cty[0]; ctyMap[c] = (ctyMap[c] || 0) + x.p; }
+  const ctyBars = Object.entries(ctyMap).map(([l, p]) => ({ l, p })).sort((a, b) => b.p - a.p).slice(0, 3);
+  const otherC = NP.cty.filter(c => c !== ctyLabel).slice(0, 4);
+  const ctyParas = [
+    `<strong>${esc(ctyLabel)}</strong> is where the ${esc(ethLabel)} naming tradition is rooted. ${esc(NP.ctyNote)}`,
+    otherC.length ? `Other places with large populations carrying this kind of name: ${esc(list(otherC))}.` : "",
+    t2 && t2.p >= .18 && O[t2.o].cty[0] !== ctyLabel ? `If the ${esc(P2.eth)} reading is correct, the most likely country of origin would instead be ${esc(P2.cty[0])}.` : "",
+  ];
+
+  /* Religion */
+  const r1 = r.relRanked[0], r2 = r.relRanked[1];
+  const fam = l => l.replace(/ \(.*\)$/, "");
+  let relVerdict = r1.l, relShare = r1.p;
+  if (r1.p < .5 && r2) {
+    const famSums = {};
+    for (const x of r.relRanked) famSums[fam(x.l)] = (famSums[fam(x.l)] || 0) + x.p;
+    const [topFam, famShare] = Object.entries(famSums).sort((a, b) => b[1] - a[1])[0];
+    const members = r.relRanked.filter(x => fam(x.l) === topFam);
+    const sub = members.slice(0, 2).map(x => (x.l.match(/\((.*)\)/) || [])[1]).filter(Boolean);
+    if (famShare >= .5) { relVerdict = sub.length > 1 ? `${topFam} (${sub.join(" or ")})` : members[0].l; relShare = famShare; }
+    else relVerdict = `${r1.l}, or ${r2.l}`;
+  }
+  const islamTot = r.relRanked.filter(x => fam(x.l) === "Islam").reduce((a, b) => a + b.p, 0);
+  const shiaShare = (r.relRanked.find(x => x.l === SHIA)?.p || 0) / (islamTot || 1);
+  if (islamTot >= .5 && fam(r1.l) === "Islam" && shiaShare >= .25 && shiaShare <= .85) { relVerdict = "Islam (Sunni or Shia)"; relShare = islamTot; }
+  const hinted = r.relHints.some(h => h.s >= .5);
+  const relConf = relShare >= .7 && hinted ? "high" : relShare >= .5 ? "moderate" : "low";
+  const relParas = [
+    esc(NP.relNote),
+    t2 && t2.p >= .25 && !sameFamily(t1.o, t2.o) ? `For the ${esc(P2.eth)} reading: ${esc(P2.relNote)}` : "",
+    r.relHints.length ? `<strong>Name-specific clues.</strong> ${r.relHints.slice().reverse().slice(0, 2).map(h => esc(h.note)).join(" ")} This shifts the estimate beyond the general population figures.` : `No name-specific religious clue was found, so this estimate reflects the overall religious makeup of the ${esc(ethLabel)} population.`,
+  ];
+
+  cards.innerHTML =
+    card("Likely ethnic background", ethVerdict, conf, ethBars, ethParas,
+      "Ethnicity is about heritage, language and community. A name shows one inherited thread of it, not a person's full ancestry or how they identify.") +
+    card("Likely native country", ctyLabel, conf, ctyBars, ctyParas,
+      "This estimates the country the name's tradition comes from. Many people with this kind of name were born and raised elsewhere, and a name says nothing about citizenship or where someone lives.") +
+    card("Likely religion", relVerdict, relConf, r.relRanked.slice(0, 3).map(x => ({ l: x.l, p: x.p })), relParas,
+      "Religion is personal. A name reflects at most the religious tradition of the family that chose it. In every community many people are secular, have converted, or practice in their own way.");
+}
+
+/* ---------- Wire-up ---------- */
+const input = document.getElementById("name"), err = document.getElementById("err");
+function run(name) {
+  const r = analyze(name);
+  if (r.error) { err.textContent = r.error; err.hidden = false; return; }
+  err.hidden = true;
+  render(r);
+}
+document.getElementById("f").addEventListener("submit", e => { e.preventDefault(); run(input.value); });
+const EX = ["Aleksandra Kowalski", "Gurpreet Sandhu", "Siobhan O'Connell", "Emir Hodžić", "Kwame Mensah", "Yuki Tanaka", "Elias Khoury", "Priya Raman", "Mateo Hernández", "Hannah Goldberg"];
+const exEl = document.getElementById("examples");
+for (const n of EX) {
+  const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = n;
+  b.addEventListener("click", () => { input.value = n; run(n); });
+  exEl.appendChild(b);
+}
+input.value = EX[0];
+run(EX[0]);
+window.__cultureSeeker = { analyze };
+})();
+</script>
+</body>
+</html>
