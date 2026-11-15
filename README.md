@@ -23,6 +23,7 @@ To refresh by hand, open the **Actions** tab, choose **Update data and deploy**,
 | `build.ps1` | Combines `template.html` + `data.json` into `_site/index.html` |
 | `data.json` | Latest saved snapshot |
 | `cache/` | Per-game plus/minus rows, so daily runs only fetch new games |
+| `culture-seeker/index.html` | Culture Seeker name-origin page, deployed at `/culture-seeker/` |
 
 ## Run locally
 
@@ -33,3 +34,7 @@ start _site\index.html
 ```
 
 Data from ESPN. Not affiliated with the NBA or ESPN.
+
+## Culture Seeker
+
+`culture-seeker/index.html` is a separate, self-contained page, live at https://siddharthhariharan-sys.github.io/postgame/culture-seeker/. `build.ps1` copies it to `_site/culture-seeker/` on every deploy. Type a person's full name and it estimates the likely religion, ethnic background and native country the name points to, with commentary explaining each estimate. It matches the name against built-in lists of surnames, given names and spelling patterns (for example *-ski*, *-yan*, *Mac-*, *-nen*), so it needs no server or API. Open the file in a browser to use it. Results are probabilistic estimates of a name's heritage, not facts about a person.

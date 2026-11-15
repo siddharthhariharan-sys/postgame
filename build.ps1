@@ -32,3 +32,12 @@ $out = Join-Path $root $OutDir
 New-Item -ItemType Directory -Force $out | Out-Null
 [IO.File]::WriteAllText((Join-Path $out "index.html"), $head + $body + "`n</body>`n</html>`n", $utf8)
 "Wrote $OutDir/index.html"
+
+# Culture Seeker is a separate, self-contained page served at /culture-seeker/
+$cs = Join-Path $root "culture-seeker/index.html"
+if (Test-Path $cs) {
+  $csOut = Join-Path $out "culture-seeker"
+  New-Item -ItemType Directory -Force $csOut | Out-Null
+  Copy-Item $cs (Join-Path $csOut "index.html") -Force
+  "Wrote $OutDir/culture-seeker/index.html"
+}
