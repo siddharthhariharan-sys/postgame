@@ -33,3 +33,7 @@ start _site\index.html
 ```
 
 Data from ESPN. Not affiliated with the NBA or ESPN.
+
+## Culture Seeker
+
+`culture-seeker/index.html` is a separate, self-contained page. Type a person's full name and it estimates the likely religion, ethnic background and native country the name points to, with commentary explaining each estimate. It matches the name against built-in lists of surnames, given names and spelling patterns (for example *-ski*, *-yan*, *Mac-*, *-nen*), so it needs no server or API. Open the file in a browser to use it. Results are probabilistic estimates of a name's heritage, not facts about a person.
