@@ -56,6 +56,18 @@ header.top{background:var(--blue);color:var(--head-ink);position:sticky;top:env(
 .pick{display:flex;align-items:center;gap:8px;font:600 12px var(--body);color:var(--head-ink)}
 .pick span{opacity:.9;white-space:nowrap}
 
+/* Jump menu: second row of the sticky header, so it follows you down the page */
+nav.jump{flex:1 0 100%;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:-2px 0 -4px;padding:2px}
+nav.jump::-webkit-scrollbar{display:none}
+nav.jump a{font:700 15px/1 var(--display);letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;text-decoration:none;color:var(--head-ink);background:var(--ctl-bg);border:1px solid var(--ctl-line);border-radius:999px;padding:6px 13px}
+nav.jump a:hover{background:var(--ctl-hover)}
+nav.jump a[aria-current="true"]{background:var(--head-ink);color:var(--blue);border-color:var(--head-ink)}
+.section-head,.tile{scroll-margin-top:calc(var(--head-h,130px) + env(safe-area-inset-top,0px) + 14px)}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+/* Players on your favorite team, everywhere on the page */
+.pname.mine,.tip .mine{font-weight:800;color:var(--blue-ink);background:color-mix(in srgb,var(--blue) 14%,transparent);box-shadow:inset 0 -2px 0 var(--red);border-radius:4px;padding:0 4px;margin:0 -4px}
+
 main{padding-block:22px 40px}
 .section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:30px 0 12px;flex-wrap:wrap}
 .section-head:first-child{margin-top:0}
@@ -190,19 +202,22 @@ footer{color:var(--muted);font-size:12px;padding-block:8px 28px}
         <span class="lbl" id="themelbl">Dark mode</span>
       </button>
     </div>
+    <nav class="jump" id="jump" aria-label="Jump to section">
+      <a href="#the-night">The Night</a><a href="#standings">Standings</a><a href="#scores">Scores</a><a href="#season-leaders">Season Leaders</a><a href="#team-stats">Team Stats</a><a href="#trendlines">Trendlines</a>
+    </nav>
   </div>
 </header>
 
 <main class="wrap">
-  <div class="section-head"><h2>The Night</h2><p class="status" id="status"></p></div>
+  <div class="section-head" id="the-night"><h2>The Night</h2><p class="status" id="status"></p></div>
   <div class="grid three" id="leaders"></div>
-  <div class="section-head"><h2>Scores</h2><p id="gamecount"></p></div>
+  <div class="section-head" id="scores"><h2>Scores</h2><p id="gamecount"></p></div>
   <div class="grid" id="games"></div>
-  <div class="section-head"><h2>Season Leaders</h2><p id="seasonnote"></p></div>
+  <div class="section-head" id="season-leaders"><h2>Season Leaders</h2><p id="seasonnote"></p></div>
   <div class="grid three" id="season"></div>
-  <div class="section-head"><h2>Team Stats</h2><p id="teamnote"></p></div>
+  <div class="section-head" id="team-stats"><h2>Team Stats</h2><p id="teamnote"></p></div>
   <div class="grid three" id="teams"></div>
-  <div class="section-head"><h2>Trendlines</h2><p id="trendnote"></p></div>
+  <div class="section-head" id="trendlines"><h2>Trendlines</h2><p id="trendnote"></p></div>
   <div class="grid three" id="trends"></div>
 </main>
 <footer class="wrap">Unofficial fan page. Box score data from ESPN. Click any player to open their ESPN profile, or any game to open its ESPN Gamecast.</footer>
@@ -344,7 +359,8 @@ function chip(team){
   return `<span class="chip" style="--c:${esc(c)};--fg:${fg}">${esc(team.abbr)}</span>`;
 }
 const profile = id => `https://www.espn.com/nba/player/_/id/${encodeURIComponent(id)}`;
-const plink = p => `<a class="pname" href="${profile(p.id)}" target="_blank" rel="noopener noreferrer">${esc(p.n)}</a>`;
+const isMine = p => { const fav = $("#team").value; return !!fav && !!p && p.t === fav; };
+const plink = p => `<a class="pname${isMine(p) ? " mine" : ""}" href="${profile(p.id)}" target="_blank" rel="noopener noreferrer">${esc(p.n)}</a>`;
 function fmtFetched(iso){
   if (!iso) return "";
   const d = new Date(iso.replace("Z", ":00Z"));
@@ -375,7 +391,7 @@ function render(data){
       <div class="line"><b>${p.pts}</b> pts · <b>${p.reb}</b> reb · <b>${p.ast}</b> ast · <b>${p.blk}</b> blk · <b>${p.stl}</b> stl · <b>${p.to}</b> to · <b>${p.fgm}-${p.fga}</b> FG (${pct(p.fgm,p.fga)})</div></div>
       <div class="big">${p.gs.toFixed(1)}</div></li>`).join("")}</ol>` : `<p class="empty">No games on ${esc(dateTxt)}.</p>`}
     <p class="foot">Game score is the single-game version of PER: points, rebounds, assists, steals, blocks and shooting efficiency, minus turnovers and fouls. 10 is average; 40+ is a monster night.</p></section>`;
-  html += standingsTile("Western Conference", (data.standings || {}).west) + standingsTile("Eastern Conference", (data.standings || {}).east);
+  html += standingsTile("Western Conference", (data.standings || {}).west, "standings") + standingsTile("Eastern Conference", (data.standings || {}).east);
 
   // Rows 2-3: night's leaders, then milestones
   const leaders = [
@@ -507,7 +523,7 @@ function wireHover(el, dates, series){
     hov.innerHTML = `<line class="cross" x1="${x(i)}" x2="${x(i)}" y1="${PAD.t}" y2="${H - PAD.b}"/>` +
       pts.map(p => `<circle class="end" cx="${x(i)}" cy="${y(p.v)}" r="4.5" style="fill:var(--s${p.k+1})"/>`).join("");
     const day = new Date(dates[i] + "T12:00:00").toLocaleDateString(undefined, {weekday:"short", month:"short", day:"numeric"});
-    tip.innerHTML = `<b>${day}</b>` + (pts.length ? [...pts].sort((a,b) => b.v - a.v).map(p => `<div><span style="display:flex;align-items:center;gap:6px"><span class="sw" style="--c:var(--s${p.k+1})"></span>${esc(p.s.n)}</span><span class="v">${f1(p.v)}</span></div>`).join("") : `<div>No qualifying games yet</div>`);
+    tip.innerHTML = `<b>${day}</b>` + (pts.length ? [...pts].sort((a,b) => b.v - a.v).map(p => `<div><span style="display:flex;align-items:center;gap:6px"><span class="sw" style="--c:var(--s${p.k+1})"></span><span class="${isMine(p.s) ? "mine" : ""}">${esc(p.s.n)}</span></span><span class="v">${f1(p.v)}</span></div>`).join("") : `<div>No qualifying games yet</div>`);
     tip.hidden = false;
     const px = r.left - el.getBoundingClientRect().left + x(i) * r.width / W, tw = tip.offsetWidth, cw = el.clientWidth;
     tip.style.left = Math.max(4, Math.min(cw - tw - 4, px + 12 + (px + 12 + tw > cw ? -tw - 24 : 0))) + "px";
@@ -517,14 +533,14 @@ function wireHover(el, dates, series){
   hit.addEventListener("pointermove", show); hit.addEventListener("pointerdown", show); hit.addEventListener("pointerleave", hide);
 }
 
-function standingsTile(title, rows){
+function standingsTile(title, rows, id){
   rows = rows || [];
   const body = rows.map(r => {
     const m = /^([WL])(\d+)$/.exec(r.streak || "");
     const pill = m ? `<span class="pill ${m[1] === "W" ? "w" : "l"}">${esc(r.streak)}</span>` : esc(r.streak || "–");
     return `<tr class="${r.seed === 6 || r.seed === 10 ? "cut" : ""}"><td class="seed">${r.seed}</td><td class="tm">${esc(r.short)}</td><td class="n">${r.w}-${r.l}</td><td class="n">${esc(r.gb)}</td><td class="sk">${pill}</td></tr>`;
   }).join("");
-  return `<section class="tile"><div class="tile-head"><h3>${title}</h3><span class="unit">Standings</span></div>
+  return `<section class="tile"${id ? ` id="${id}"` : ""}><div class="tile-head"><h3>${title}</h3><span class="unit">Standings</span></div>
     ${rows.length ? `<table class="st"><colgroup><col class="c-seed"><col><col class="c-wl"><col class="c-gb"><col class="c-strk"></colgroup>
       <thead><tr><th scope="col" class="seed">#</th><th scope="col" class="tm">Team</th><th scope="col" class="n">W-L</th><th scope="col" class="n">GB</th><th scope="col" class="sk">Strk</th></tr></thead><tbody>${body}</tbody></table>
     <p class="foot">Dashed lines mark the playoff (top 6) and play-in (7–10) cutoffs.</p>` : `<p class="empty">Standings aren't available right now.</p>`}</section>`;
@@ -627,11 +643,50 @@ function renderSeason(data){
   }).join("");
 }
 
+/* ---------- Jump menu: smooth-scroll to a section and highlight the one you're in ---------- */
+function initJumpMenu(){
+  const header = $("header.top"), links = [...document.querySelectorAll("#jump a")];
+  const ids = links.map(a => a.getAttribute("href").slice(1));
+  // Sections stop just below the sticky header, whatever height it wraps to.
+  const setHeadH = () => document.body.style.setProperty("--head-h", header.offsetHeight + "px");
+  setHeadH();
+  if (window.ResizeObserver) new ResizeObserver(setHeadH).observe(header); else addEventListener("resize", setHeadH);
+  const mark = id => links.forEach(a => {
+    const on = a.getAttribute("href") === "#" + id;
+    if (!on) { a.removeAttribute("aria-current"); return; }
+    if (a.getAttribute("aria-current") === "true") return;
+    a.setAttribute("aria-current", "true");
+    // On narrow screens the menu scrolls sideways; keep the active item in view without touching page scroll.
+    const nav = a.parentElement, l = a.offsetLeft - nav.offsetLeft, r = l + a.offsetWidth;
+    if (l < nav.scrollLeft) nav.scrollLeft = l - 8; else if (r > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = r - nav.clientWidth + 8;
+  });
+  let ticking = false, lockUntil = 0;
+  const update = () => {
+    ticking = false;
+    if (Date.now() < lockUntil) return;
+    const line = header.getBoundingClientRect().bottom + 40;
+    let active = ids[0];
+    ids.forEach(id => { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top <= line) active = id; });
+    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2) active = ids[ids.length - 1];
+    mark(active);
+  };
+  addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, {passive:true});
+  links.forEach(a => a.addEventListener("click", e => {
+    const id = a.getAttribute("href").slice(1), el = document.getElementById(id);
+    if (!el) return;
+    e.preventDefault(); // keep any #team= link in the address bar intact
+    mark(id); lockUntil = Date.now() + 800; // hold the clicked item while the smooth scroll runs
+    el.scrollIntoView({block:"start"});
+  }));
+  update();
+}
+
 /* ---------- Boot ---------- */
 const snapshot = JSON.parse($("#snapshot").textContent);
 let current = snapshot;
 initTeamPicker();
 render(snapshot);
+initJumpMenu();
 
 // Live mode: works when the page can reach ESPN (e.g. opened from the local file). Otherwise the snapshot stays.
 const ymd = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
